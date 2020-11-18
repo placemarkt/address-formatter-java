@@ -68,13 +68,23 @@
         </plugin>
       </plugins>
     </pluginManagement>
-  </build>
-
-  <reporting>
     <plugins>
       <plugin>
-        <artifactId>maven-project-info-reports-plugin</artifactId>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.5.0</version>
+        <executions>
+          <execution>
+            <phase>install</phase>
+            <goals>
+              <goal>java</goal>
+            </goals>
+            <configuration>
+              <mainClass>net.placemarkt.PrepareTemplates</mainClass>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
-  </reporting>
+  </build>
 </project>
