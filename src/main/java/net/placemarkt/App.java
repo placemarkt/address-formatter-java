@@ -1,13 +1,17 @@
 package net.placemarkt;
 
-/**
- * Hello world!
- *
- */
-public class App 
+import java.io.InputStream;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.util.stream.Collectors;
+
+public class App
 {
     public static void main( String[] args )
     {
-        System.out.println( "Hello World!" );
+      InputStream inputStream = App.class.getClassLoader().getResourceAsStream("templates.json");
+      String result = new BufferedReader(new InputStreamReader(inputStream))
+          .lines().collect(Collectors.joining("\n"));
+      System.out.println(result);
     }
 }
