@@ -153,7 +153,7 @@ public class TemplateProcessor {
   }
 
   /*
-  not sure if these need to be transformed in any particular way
+  TODO: Look into formatting this data in such a way that makes it easier to query
    */
   static ObjectNode transpileCountyCodes() {
     ObjectNode node = null;
@@ -162,8 +162,6 @@ public class TemplateProcessor {
       String yaml = Files.readString(path);
       Object obj = yamlReader.readValue(yaml, Object.class);
       node = jsonWriter.valueToTree(obj);
-      //String json = jsonWriter.writeValueAsString(obj);
-      //System.out.print(json);
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -171,7 +169,7 @@ public class TemplateProcessor {
   }
 
   /*
-  not sure if these need to be transformed in any particular way
+  TODO: Look into formatting this data in such a way that makes it easier to query
    */
   static ObjectNode transpileStateCodes() {
     ObjectNode node = null;
@@ -180,8 +178,6 @@ public class TemplateProcessor {
       String yaml = Files.readString(path);
       Object obj = yamlReader.readValue(yaml, Object.class);
       node = jsonWriter.valueToTree(obj);
-      //String json = jsonWriter.writeValueAsString(obj);
-      //System.out.print(json);
     } catch (IOException e) {
       e.printStackTrace();
     }
