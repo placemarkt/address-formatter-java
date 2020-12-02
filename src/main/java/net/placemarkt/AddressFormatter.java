@@ -11,7 +11,7 @@ class AddressFormatter {
     this.outputFormat = outputFormat;
   }
 
-  public String format() {
+  public String format(String json) {
     return "";
   }
 }

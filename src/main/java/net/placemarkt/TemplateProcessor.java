@@ -12,7 +12,6 @@ import java.util.Iterator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -22,7 +21,6 @@ public class TemplateProcessor {
   private static final ObjectMapper yamlReader = new ObjectMapper(new YAMLFactory());
   private static final YAMLFactory yamlFactory = new YAMLFactory();
   private static final ObjectMapper jsonWriter = new ObjectMapper();
-  private ObjectNode country;
 
   static JsonNode transpileWorldwide() {
     ObjectNode node = null;
@@ -35,7 +33,7 @@ public class TemplateProcessor {
       e.printStackTrace();
     }
 
-    return (JsonNode) node;
+    return node;
   }
 
   static JsonNode transpileCountryNames() {
@@ -50,7 +48,7 @@ public class TemplateProcessor {
       e.printStackTrace();
     }
 
-    return (JsonNode) node;
+    return node;
   }
 
   static JsonNode transpileAliases() {
@@ -73,7 +71,7 @@ public class TemplateProcessor {
         componentNode.put("alias", component.get("name").textValue());
         componentNode.put("name", component.get("name").textValue());
       });
-      return (JsonNode) node;
+      return node;
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -84,9 +82,7 @@ public class TemplateProcessor {
   static JsonNode transpileAbbreviations() {
     ObjectNode abbreviations = jsonWriter.createObjectNode();
     try {
-      ObjectReader objectReader = yamlReader.readerForUpdating(abbreviations);
       try (Stream<Path> paths = Files.list(Paths.get("address-formatting/conf/abbreviations"))) {
-        ObjectNode node = jsonWriter.createObjectNode();
         paths.forEach(path -> {
           try {
             String fileNameWithExtension = path.getFileName().toString();
