@@ -66,7 +66,7 @@ public class AddressFormatterTest {
 
   @Test
   public void verifyAddressFormatting() throws Exception {
-    String formatted = this.formatter.format(this.components);
+    String formatted = formatter.format(this.components);
     Assert.assertEquals(this.address, formatted);
   }
 }

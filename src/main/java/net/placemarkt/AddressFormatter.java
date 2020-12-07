@@ -39,9 +39,9 @@ class AddressFormatter {
   }
 
   private final ObjectMapper yamlReader = new ObjectMapper(new YAMLFactory());
-  private OutputType outputType;
-  private boolean abbreviate;
-  private boolean appendCountry;
+  private final OutputType outputType;
+  private final boolean abbreviate;
+  private final boolean appendCountry;
 
   public static void main(String[] args) {
     AddressFormatter formatter = new AddressFormatter(OutputType.STRING, false, false);
@@ -164,7 +164,7 @@ class AddressFormatter {
     components.forEach((key, value) -> {
       String newKey = key;
       Object newValue = value;
-      Iterator<JsonNode> iterator = ((ArrayNode) aliases).elements();
+      Iterator<JsonNode> iterator = aliases.elements();
       while(iterator.hasNext()) {
         JsonNode pair = iterator.next();
         if (pair.get("alias").asText().equals(key) && components.get(pair.get("name").asText()) == null) {
@@ -205,5 +205,5 @@ class AddressFormatter {
     return "";
   }
 
-  public enum OutputType { STRING, ARRAY };
+  public enum OutputType { STRING, ARRAY }
 }
