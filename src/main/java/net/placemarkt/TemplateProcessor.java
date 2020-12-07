@@ -51,7 +51,7 @@ public class TemplateProcessor {
     return node;
   }
 
-  static JsonNode transpileAliases() {
+  static ArrayNode transpileAliases() {
     try {
       final ArrayNode node = jsonWriter.createArrayNode();
       Path path = Paths.get("address-formatting/conf/components.yaml");

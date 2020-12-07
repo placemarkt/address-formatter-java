@@ -18,11 +18,10 @@ import java.util.Collection;
 import java.util.stream.Stream;
 
 @RunWith(Parameterized.class)
-public class AddressFormatterBuilderTest {
+public class AddressFormatterTest {
   final private String components;
   final private String address;
   final private String description;
-  static AddressFormatterBuilder builder;
   static AddressFormatter formatter;
 
   @BeforeClass
@@ -30,7 +29,7 @@ public class AddressFormatterBuilderTest {
     formatter = new AddressFormatter();
   }
 
-  public AddressFormatterBuilderTest(String components, String address, String description) {
+  public AddressFormatterTest(String components, String address, String description) {
     super();
     this.components = components;
     this.address = address;
