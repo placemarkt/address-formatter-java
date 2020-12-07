@@ -1,6 +1,7 @@
 package net.placemarkt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.type.TypeFactory;
@@ -26,18 +27,21 @@ class AddressFormatter {
   private static final JsonNode stateCodes = TemplateProcessor.transpileStateCodes();
   private static final List knownComponents = getKnownComponents();
 
+  private static List<String> getKnownComponents() {
+    List<String> knownComponents = new ArrayList<>();
+    Iterator<JsonNode> fields = AddressFormatter.aliases.elements();
+    while(fields.hasNext()) {
+      JsonNode field = fields.next();
+      knownComponents.add(field.get("alias").textValue());
+    }
+
+    return knownComponents;
+  }
+
+  private final ObjectMapper yamlReader = new ObjectMapper(new YAMLFactory());
   private OutputType outputType;
   private boolean abbreviate;
   private boolean appendCountry;
-  private final ObjectMapper yamlReader = new ObjectMapper(new YAMLFactory());
-
-  public enum OutputType { STRING, ARRAY };
-
-  AddressFormatter(OutputType outputType, Boolean abbreviate, Boolean appendCountry)  {
-    this.outputType = outputType;
-    this.abbreviate = abbreviate;
-    this.appendCountry = appendCountry;
-  }
 
   public static void main(String[] args) {
     AddressFormatter formatter = new AddressFormatter(OutputType.STRING, false, false);
@@ -48,22 +52,17 @@ class AddressFormatter {
           + "houseNumber: 88,"
           + "neighbourhood: Centre històric,"
           + "postcode: AD500,"
-          + "road: Avinguda Meritxell,"
+          + "residential: Avinguda Meritxell,"
           + "town: Andorra la Vella}");
     } catch (IOException e) {
       e.printStackTrace();
     }
   }
 
-  private static List<String> getKnownComponents() {
-    List<String> knownComponents = new ArrayList<>();
-    Iterator<JsonNode> fields = AddressFormatter.aliases.elements();
-    while(fields.hasNext()) {
-      JsonNode field = fields.next();
-      knownComponents.add(field.get("alias").textValue());
-    }
-
-    return knownComponents;
+  AddressFormatter(OutputType outputType, Boolean abbreviate, Boolean appendCountry)  {
+    this.outputType = outputType;
+    this.abbreviate = abbreviate;
+    this.appendCountry = appendCountry;
   }
 
   Map<String, Object> normalizeFields(Map<String, Object> components) {
@@ -111,13 +110,15 @@ class AddressFormatter {
         Matcher m = p.matcher(newCountry);
         String match;
         if (m.find()) {
-          match = m.group(1);
-          Pattern p2 = Pattern.compile(String.format("$%s", match));
-          Matcher m2 = p2.matcher(country.get(match).toString());
-          if (match != null && components.containsKey(match)) {
+          match = m.group(1); // $state
+          Pattern p2 = Pattern.compile(String.format("\\$%s", match));
+          Matcher m2;
+          if (components.get(match) != null && components.containsKey(match)) {
+            m2 = p2.matcher(newCountry);
             String toReplace = components.get(match).toString();
             newCountry = m2.replaceAll(toReplace);
           } else {
+            m2 = p2.matcher(newCountry);
             newCountry = m2.replaceAll("");
           }
           components.put("country", newCountry);
@@ -134,7 +135,7 @@ class AddressFormatter {
       }
     }
 
-    String state = components.get("state").toString();
+    String state = (components.get("state") != null) ? components.get("state").toString() : null;
 
     if (countryCode.equals("NL") && state != null) {
       Pattern p1 = Pattern.compile("sint maarten", Pattern.CASE_INSENSITIVE);
@@ -157,6 +158,27 @@ class AddressFormatter {
     return components;
   }
 
+  Map<String, Object> applyAliases(Map<String, Object> components) {
+    System.out.print(aliases.toPrettyString());
+    Map<String, Object> aliasedComponents = new HashMap<>();
+    components.forEach((key, value) -> {
+      String newKey = key;
+      Object newValue = value;
+      Iterator<JsonNode> iterator = ((ArrayNode) aliases).elements();
+      while(iterator.hasNext()) {
+        JsonNode pair = iterator.next();
+        if (pair.get("alias").asText().equals(key) && components.get(pair.get("name").asText()) == null) {
+          newKey = pair.get("name").asText();
+          break;
+        }
+      }
+
+      aliasedComponents.put(newKey, newValue);
+    });
+
+    return aliasedComponents;
+  }
+
   public String format(String json) throws IOException {
     return format(json, null);
   }
@@ -166,12 +188,22 @@ class AddressFormatter {
     MapType type = factory.constructMapType(HashMap.class, String.class, String.class);
     Map<String, Object> components = yamlReader.readValue(json, type);
     components = normalizeFields(components);
+
     if (fallbackCountryCode != null) {
       components.put("countryCode", fallbackCountryCode);
     }
-    components = determineCountryCode(components, fallbackCountryCode);
 
+    components = determineCountryCode(components, fallbackCountryCode);
+    String countryCode = components.get("country_code").toString();
+
+    if (appendCountry && countryNames.has(countryCode) && components.get("country") == null) {
+      components.put("country", countryNames.get(countryCode).asText());
+    }
+
+    components = applyAliases(components);
 
     return "";
   }
+
+  public enum OutputType { STRING, ARRAY };
 }
