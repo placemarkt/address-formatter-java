@@ -24,7 +24,7 @@ class AddressFormatter {
   private static final JsonNode country2Lang = TemplateProcessor.transpileCountry2Lang();
   private static final JsonNode countryCodes = TemplateProcessor.transpileCountyCodes();
   private static final JsonNode stateCodes = TemplateProcessor.transpileStateCodes();
-  private static final List knownComponents = getKnownComponents(aliases);
+  private static final List knownComponents = getKnownComponents();
 
   private final ObjectMapper yamlReader = new ObjectMapper(new YAMLFactory());
 
@@ -47,9 +47,9 @@ class AddressFormatter {
     }
   }
 
-  private static List getKnownComponents(JsonNode aliases) {
+  private static List<String> getKnownComponents() {
     List<String> knownComponents = new ArrayList<>();
-    Iterator<JsonNode> fields = aliases.elements();
+    Iterator<JsonNode> fields = AddressFormatter.aliases.elements();
     while(fields.hasNext()) {
       JsonNode field = fields.next();
       knownComponents.add(field.get("alias").textValue());
@@ -72,7 +72,7 @@ class AddressFormatter {
   }
 
   Map<String, Object> determineCountryCode(Map<String, Object> components, String fallbackCountryCode) {
-    String countryCode = null;
+    String countryCode;
 
     if (components.get("country_code") != null) {
       countryCode = (String) components.get("country_code");
@@ -113,21 +113,39 @@ class AddressFormatter {
             newCountry = m2.replaceAll("");
           }
           components.put("country", newCountry);
-        };
+        }
 
         JsonNode oldCountry = worldwide.get(oldCountryCode);
         JsonNode oldCountryAddComponent = oldCountry.get("add_component");
-        if (oldCountryAddComponent != null && oldCountryAddComponent.toString().indexOf("=") != -1) {
-          String[] splitted = oldCountryAddComponent.toString().split("=");
-          if (splitted[0].equals("state")) {
-            components.put("state", splitted[1]);
+        if (oldCountryAddComponent != null && oldCountryAddComponent.toString().contains("=")) {
+          String[] pairs = oldCountryAddComponent.toString().split("=");
+          if (pairs[0].equals("state")) {
+            components.put("state", pairs[1]);
           }
         }
       }
     }
 
+    String state = components.get("state").toString();
 
+    if (countryCode.equals("NL") && state != null) {
+      Pattern p1 = Pattern.compile("sint maarten", Pattern.CASE_INSENSITIVE);
+      Matcher m1 = p1.matcher(state);
+      Pattern p2 = Pattern.compile("aruba", Pattern.CASE_INSENSITIVE);
+      Matcher m2 = p2.matcher(state);
+      if (state.equals("Curaçao")) {
+        countryCode = "CW";
+        components.put("country", "Curaçao");
+      } else if (m1.find()) {
+        countryCode = "SX";
+        components.put("country", "Sint Maarten");
+      } else if (m2.find()) {
+        countryCode = "AW";
+        components.put("country", "Aruba");
+      }
+    }
 
+    components.put("country_code", countryCode);
     return components;
   }
 
