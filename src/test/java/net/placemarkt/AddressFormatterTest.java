@@ -27,8 +27,7 @@ public class AddressFormatterBuilderTest {
 
   @BeforeClass
   public static void setup() {
-    builder = new AddressFormatterBuilder();
-    formatter = builder.build();
+    formatter = new AddressFormatter();
   }
 
   public AddressFormatterBuilderTest(String components, String address, String description) {

@@ -34,10 +34,14 @@
       <version>2.11.3</version>
     </dependency>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.12</version>
-      <scope>test</scope>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>30.0-jre</version>
+    </dependency>
+    <dependency>
+      <groupId>com.amihaiemil.web</groupId>
+      <artifactId>eo-yaml</artifactId>
+      <version>5.1.6</version>
     </dependency>
   </dependencies>
 
@@ -58,7 +62,7 @@
           <archive>
             <manifest>
               <addClasspath>true</addClasspath>
-              <mainClass>net.placemarkt.AddressFormatterBuilder</mainClass>
+              <mainClass>net.placemarkt.AddressFormatter</mainClass>
             </manifest>
           </archive>
         </configuration>
