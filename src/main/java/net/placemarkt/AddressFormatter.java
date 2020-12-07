@@ -181,6 +181,17 @@ class AddressFormatter {
     return aliasedComponents;
   }
 
+  JsonNode findTemplate(Map<String, Object> components) {
+    JsonNode template;
+    if (worldwide.has(components.get("country_code").toString())) {
+      template = worldwide.get(components.get("country_code").toString());
+    } else {
+      template = worldwide.get("default");
+    }
+
+    return template;
+  }
+
   public String format(String json) throws IOException {
     return format(json, null);
   }
@@ -203,6 +214,7 @@ class AddressFormatter {
     }
 
     components = applyAliases(components);
+    JsonNode template = findTemplate(components);
 
     return "";
   }
