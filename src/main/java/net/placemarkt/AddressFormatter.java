@@ -30,7 +30,7 @@ class AddressFormatter {
   private static List<String> getKnownComponents() {
     List<String> knownComponents = new ArrayList<>();
     Iterator<JsonNode> fields = AddressFormatter.aliases.elements();
-    while(fields.hasNext()) {
+    while (fields.hasNext()) {
       JsonNode field = fields.next();
       knownComponents.add(field.get("alias").textValue());
     }
@@ -59,7 +59,7 @@ class AddressFormatter {
     }
   }
 
-  AddressFormatter(OutputType outputType, Boolean abbreviate, Boolean appendCountry)  {
+  AddressFormatter(OutputType outputType, Boolean abbreviate, Boolean appendCountry) {
     this.outputType = outputType;
     this.abbreviate = abbreviate;
     this.appendCountry = appendCountry;
@@ -67,7 +67,7 @@ class AddressFormatter {
 
   Map<String, Object> normalizeFields(Map<String, Object> components) {
     Map<String, Object> normalizedComponents = new HashMap<>();
-    for(Map.Entry<String, Object> entry : components.entrySet()) {
+    for (Map.Entry<String, Object> entry : components.entrySet()) {
       String field = entry.getKey();
       Object value = entry.getValue();
       String newField = CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, field);
@@ -78,7 +78,8 @@ class AddressFormatter {
     return normalizedComponents;
   }
 
-  Map<String, Object> determineCountryCode(Map<String, Object> components, String fallbackCountryCode) {
+  Map<String, Object> determineCountryCode(Map<String, Object> components,
+      String fallbackCountryCode) {
     String countryCode;
 
     if (components.get("country_code") != null) {
@@ -100,7 +101,7 @@ class AddressFormatter {
     }
 
     JsonNode country = worldwide.get(countryCode);
-    if ( country != null && country.has("use_country")) {
+    if (country != null && country.has("use_country")) {
       String oldCountryCode = countryCode;
       countryCode = country.get("use_country").asText().toUpperCase();
 
@@ -165,9 +166,10 @@ class AddressFormatter {
       String newKey = key;
       Object newValue = value;
       Iterator<JsonNode> iterator = aliases.elements();
-      while(iterator.hasNext()) {
+      while (iterator.hasNext()) {
         JsonNode pair = iterator.next();
-        if (pair.get("alias").asText().equals(key) && components.get(pair.get("name").asText()) == null) {
+        if (pair.get("alias").asText().equals(key)
+            && components.get(pair.get("name").asText()) == null) {
           newKey = pair.get("name").asText();
           break;
         }
@@ -205,5 +207,5 @@ class AddressFormatter {
     return "";
   }
 
-  public enum OutputType { STRING, ARRAY }
+  public enum OutputType {STRING, ARRAY}
 }
