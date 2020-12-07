@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import net.placemarkt.AddressFormatter.OutputType;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -26,7 +27,7 @@ public class AddressFormatterTest {
 
   @BeforeClass
   public static void setup() {
-    formatter = new AddressFormatter();
+    formatter = new AddressFormatter(OutputType.STRING, false, false);
   }
 
   public AddressFormatterTest(String components, String address, String description) {

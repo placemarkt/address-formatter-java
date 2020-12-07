@@ -26,13 +26,21 @@ class AddressFormatter {
   private static final JsonNode stateCodes = TemplateProcessor.transpileStateCodes();
   private static final List knownComponents = getKnownComponents();
 
+  private OutputType outputType;
+  private boolean abbreviate;
+  private boolean appendCountry;
   private final ObjectMapper yamlReader = new ObjectMapper(new YAMLFactory());
 
+  public enum OutputType { STRING, ARRAY };
 
-  AddressFormatter()  { }
+  AddressFormatter(OutputType outputType, Boolean abbreviate, Boolean appendCountry)  {
+    this.outputType = outputType;
+    this.abbreviate = abbreviate;
+    this.appendCountry = appendCountry;
+  }
 
   public static void main(String[] args) {
-    AddressFormatter formatter = new AddressFormatter();
+    AddressFormatter formatter = new AddressFormatter(OutputType.STRING, false, false);
     try {
       formatter.format("{country: Andorra,"
           + "countryCode: sh,"
@@ -101,11 +109,11 @@ class AddressFormatter {
         String newCountry = country.get("change_country").asText();
         Pattern p = Pattern.compile("\\$(\\w*)");
         Matcher m = p.matcher(newCountry);
-        String match = null;
+        String match;
         if (m.find()) {
           match = m.group(1);
           Pattern p2 = Pattern.compile(String.format("$%s", match));
-          Matcher m2 = p.matcher(country.get(match).toString());
+          Matcher m2 = p2.matcher(country.get(match).toString());
           if (match != null && components.containsKey(match)) {
             String toReplace = components.get(match).toString();
             newCountry = m2.replaceAll(toReplace);
@@ -162,6 +170,8 @@ class AddressFormatter {
       components.put("countryCode", fallbackCountryCode);
     }
     components = determineCountryCode(components, fallbackCountryCode);
+
+
     return "";
   }
 }
