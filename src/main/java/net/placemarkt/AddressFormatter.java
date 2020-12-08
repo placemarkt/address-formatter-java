@@ -6,6 +6,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.databind.type.MapType;
+import com.google.common.primitives.Ints;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
@@ -15,6 +16,8 @@ import java.util.ArrayList;
 import com.google.common.base.CaseFormat;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import java.util.stream.StreamSupport;
+import java.util.Optional;
 
 class AddressFormatter {
 
@@ -42,22 +45,6 @@ class AddressFormatter {
   private final OutputType outputType;
   private final boolean abbreviate;
   private final boolean appendCountry;
-
-  public static void main(String[] args) {
-    AddressFormatter formatter = new AddressFormatter(OutputType.STRING, false, false);
-    try {
-      formatter.format("{country: Andorra,"
-          + "countryCode: sh,"
-          + "county: Andorra la Vella,"
-          + "houseNumber: 88,"
-          + "neighbourhood: Centre històric,"
-          + "postcode: AD500,"
-          + "residential: Avinguda Meritxell,"
-          + "town: Andorra la Vella}");
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
 
   AddressFormatter(OutputType outputType, Boolean abbreviate, Boolean appendCountry) {
     this.outputType = outputType;
@@ -160,7 +147,6 @@ class AddressFormatter {
   }
 
   Map<String, Object> applyAliases(Map<String, Object> components) {
-    System.out.print(aliases.toPrettyString());
     Map<String, Object> aliasedComponents = new HashMap<>();
     components.forEach((key, value) -> {
       String newKey = key;
@@ -192,6 +178,75 @@ class AddressFormatter {
     return template;
   }
 
+  Map<String, Object> cleanupInput(Map<String, Object> components, JsonNode replacements) {
+    Map<String, Object> cleanedComponents = new HashMap<>();
+    Object country = components.get("country");
+    Object state = components.get("state");
+
+    if (country != null && state != null && Ints.tryParse((String) country) != null) {
+      components.put("country", state);
+      components.remove("state");
+    }
+    if (replacements != null && replacements.size() > 0) {
+      Iterator<String> cIterator = components.keySet().iterator();
+      Iterator<JsonNode> rIterator = replacements.iterator();
+      while (cIterator.hasNext()) {
+        String component = cIterator.next();
+        Pattern p = Pattern.compile(String.format("^\\$%s=", component));
+        while (rIterator.hasNext()) {
+          ArrayNode replacement = (ArrayNode) rIterator.next();
+          Matcher m = p.matcher(replacement.get(0).asText());
+          if (m.find()) {
+            m.reset();
+            String value = m.replaceAll(replacement.get(0).asText());
+            if (components.get(component).toString().equals(value)) {
+              components.put(component, replacement.get(1));
+            }
+          } else {
+            Pattern p2 = Pattern.compile(replacement.get(0).asText());
+            Matcher m2 = p2.matcher(component);
+            String value = m.replaceAll(replacement.get(1).asText());
+            components.put(component, value);
+          }
+        }
+      }
+    }
+
+    if (!components.containsKey("state_code")  && components.containsKey("state")) {
+      String stateCode = getStateCode(components.get("state").toString(), components.get("country_code").toString());
+      components.put("state_code", stateCode);
+
+    }
+
+    return new HashMap<String, Object>();
+  }
+
+  String getStateCode(String state, String countryCode) {
+    if (!stateCodes.has(countryCode)) {
+      return null;
+    }
+    JsonNode country = stateCodes.get(countryCode);
+    Optional<JsonNode> stateCode = StreamSupport.stream(stateCodes.spliterator(), true).filter(posState-> {
+      if (posState.has("alt_en")) {
+        if (posState.get("alt_en").asText().toUpperCase().equals(state.toUpperCase())) {
+          return true;
+        }
+      } else {
+        if (posState.has("default")) {
+          if (posState.get("default").asText().toUpperCase().equals(state.toUpperCase())) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }).findFirst();
+    if (stateCode.isPresent()) {
+      return stateCode.get().asText();
+    } else {
+      return null;
+    }
+  }
+
   public String format(String json) throws IOException {
     return format(json, null);
   }
@@ -215,6 +270,7 @@ class AddressFormatter {
 
     components = applyAliases(components);
     JsonNode template = findTemplate(components);
+    components = cleanupInput(components, template.get("replace"));
 
     return "";
   }
