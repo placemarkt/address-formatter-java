@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import com.google.common.base.CaseFormat;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import java.util.Optional;
 
@@ -26,7 +27,7 @@ class AddressFormatter {
   private static final JsonNode aliases = TemplateProcessor.transpileAliases();
   private static final JsonNode abbreviations = TemplateProcessor.transpileAbbreviations();
   private static final JsonNode country2Lang = TemplateProcessor.transpileCountry2Lang();
-  private static final JsonNode countryCodes = TemplateProcessor.transpileCountyCodes();
+  private static final JsonNode countyCodes = TemplateProcessor.transpileCountyCodes();
   private static final JsonNode stateCodes = TemplateProcessor.transpileStateCodes();
   private static final List knownComponents = getKnownComponents();
 
@@ -215,10 +216,48 @@ class AddressFormatter {
     if (!components.containsKey("state_code")  && components.containsKey("state")) {
       String stateCode = getStateCode(components.get("state").toString(), components.get("country_code").toString());
       components.put("state_code", stateCode);
-
+      Pattern p = Pattern.compile("^washington,? d\\.?c\\.?");
+      Matcher m = p.matcher(components.get("state").toString());
+      if (m.find()) {
+        components.put("state_code", "DC");
+        components.put("state", "District of Columbia");
+        components.put("city", "Washington");
+      }
     }
 
-    return new HashMap<String, Object>();
+    if (!components.containsKey("county_code") && components.containsKey("county")) {
+      String countyCode = getCountyCode(components.get("county").toString(), components.get("country_code").toString());
+    }
+
+    List<String> unknownComponents = StreamSupport.stream(components.keySet().spliterator(), false).filter(component-> {
+      if (knownComponents.contains(component)) {
+        return true;
+      }
+      return false;
+    }).collect(Collectors.toList());
+
+    if (unknownComponents.size() > 0) {
+      components.put("attention", String.join(", ", unknownComponents));
+    }
+
+
+    if (components.containsKey("postcode")) {
+      String postCode = components.get("postcode").toString();
+      components.put("postcode", postCode);
+      Pattern p1 = Pattern.compile("^(\\d{5}),\\d{5}");
+      Pattern p2 = Pattern.compile("\\d+;\\d+");
+      Matcher m1 = p1.matcher(postCode);
+      Matcher m2 = p2.matcher(postCode);
+      if (postCode.length() > 20) {
+        components.remove("postcode");
+      } else if (m2.matches()) {
+        components.remove("postcode");
+      } else if (m1.matches()) {
+        components.put("postcode", m1.group(1));
+      }
+    }
+
+
   }
 
   String getStateCode(String state, String countryCode) {
@@ -226,22 +265,49 @@ class AddressFormatter {
       return null;
     }
     JsonNode country = stateCodes.get(countryCode);
-    Optional<JsonNode> stateCode = StreamSupport.stream(stateCodes.spliterator(), true).filter(posState-> {
-      if (posState.has("alt_en")) {
-        if (posState.get("alt_en").asText().toUpperCase().equals(state.toUpperCase())) {
-          return true;
-        }
-      } else {
+    Optional<JsonNode> stateCode = StreamSupport.stream(country.spliterator(), true).filter(posState-> {
+      if (posState.isObject()) {
         if (posState.has("default")) {
           if (posState.get("default").asText().toUpperCase().equals(state.toUpperCase())) {
             return true;
           }
+        }
+      } else {
+        if (posState.asText().toUpperCase().equals(state.toUpperCase())) {
+          return true;
         }
       }
       return false;
     }).findFirst();
     if (stateCode.isPresent()) {
       return stateCode.get().asText();
+    } else {
+      return null;
+    }
+  }
+
+  String getCountyCode(String county, String countryCode) {
+    if (!countyCodes.has(countryCode)) {
+      return null;
+    }
+    JsonNode country = countyCodes.get(countryCode);
+    Optional<JsonNode> countyCode = StreamSupport.stream(country.spliterator(), true).filter(posCounty -> {
+      if (posCounty.isObject()) {
+        if (posCounty.has("default")) {
+          if (posCounty.get("default").asText().toUpperCase().equals(county.toUpperCase())) {
+            return true;
+          }
+        }
+      } else {
+        if (posCounty.asText().toUpperCase().equals(county.toUpperCase())) {
+          return true;
+        }
+      }
+      return false;
+    }).findFirst();
+
+    if (countyCode.isPresent()) {
+      return countyCode.get().asText();
     } else {
       return null;
     }
