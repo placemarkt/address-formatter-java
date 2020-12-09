@@ -14,9 +14,11 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
 import com.google.common.base.CaseFormat;
+import java.util.Map.Entry;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import java.util.Optional;
 
@@ -257,7 +259,42 @@ class AddressFormatter {
       }
     }
 
+    if (abbreviate && components.containsKey("country_code") && country2Lang.has(components.get("country_code").toString())) {
+      JsonNode languages = country2Lang.get(components.get("country_code").toString());
+      StreamSupport.stream(languages.spliterator(), false)
+          .filter(language -> abbreviations.has(language.textValue()))
+          .forEach(language -> {
+            JsonNode languageAbbreviations = abbreviations.get(language.textValue());
+            StreamSupport.stream(languageAbbreviations.spliterator(), false)
+                .filter(abbreviation -> abbreviation.has("component"))
+                .forEach(abbreviation -> {
+                  StreamSupport.stream(abbreviation.get("replacements").spliterator(), false)
+                      .forEach(replacement -> {
+                         String oldComponent = components.get(abbreviation).toString();
+                         String regex = String.format("\b%s\b", replacements.get("src").asText());
+                         Pattern p = Pattern.compile(regex);
+                         Matcher m = p.matcher(oldComponent);
+                         String newComponent = m.replaceFirst(replacement.get("dest").asText());
+                         components.put(abbreviation.toString(), newComponent);
+                      });
+                });
+          });
+    }
 
+    Pattern p = Pattern.compile("^https?:\\/\\/");
+    return components.entrySet().stream().filter(component -> {
+      Matcher m = p.matcher(component.getValue().toString());
+      if (m.matches()) {
+        m.reset();
+        return false;
+      }
+      m.reset();
+      return true;
+    }).collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+  }
+
+  public static void main(String[] args) {
+    System.out.println(abbreviations);
   }
 
   String getStateCode(String state, String countryCode) {
