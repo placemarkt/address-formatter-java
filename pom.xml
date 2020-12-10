@@ -39,9 +39,9 @@
       <version>30.0-jre</version>
     </dependency>
     <dependency>
-      <groupId>com.amihaiemil.web</groupId>
-      <artifactId>eo-yaml</artifactId>
-      <version>5.1.6</version>
+      <groupId>com.github.spullara.mustache.java</groupId>
+      <artifactId>compiler</artifactId>
+      <version>0.9.7</version>
     </dependency>
   </dependencies>
 
