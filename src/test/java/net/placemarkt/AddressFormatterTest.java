@@ -50,7 +50,7 @@ public class AddressFormatterTest {
             Object obj = yamlReader.readValue(yaml, Object.class);
             ObjectNode node = jsonWriter.valueToTree(obj);
             String components = node.get("components").toString();
-            String expected = node.get("expected").toString();
+            String expected = node.get("expected").textValue();
             String description = node.get("description").toString();
             dict.add(new String[] {components, expected, description});
           } catch (IOException e) {
@@ -68,6 +68,5 @@ public class AddressFormatterTest {
   public void verifyAddressFormatting() throws Exception {
     String formatted = formatter.format(this.components);
     Assert.assertEquals(this.address, formatted);
-    System.out.println(formatted);
   }
 }

@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.function.Function;
@@ -25,6 +26,7 @@ import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import java.util.Optional;
+import static java.util.Map.entry;
 
 class AddressFormatter {
 
@@ -380,8 +382,25 @@ class AddressFormatter {
     Mustache m = mf.compile(new StringReader(templateText.asText()), "example");
     StringWriter st = new StringWriter();
     m.execute(st, new Object[]{ components, callback});
-    String formatted = st.toString();
-    return formatted;
+    String rendered = cleanupRender(st.toString());
+
+    if (template.has("postformat_replace")) {
+      ArrayNode postformat = (ArrayNode) template.get("postformat_replace");
+      for (JsonNode regex : postformat) {
+        Pattern p = Pattern.compile(regex.get(0).asText());
+        Matcher m2 = p.matcher(rendered);
+        rendered = m2.replaceAll(regex.get(1).asText());
+      }
+    }
+    rendered = cleanupRender(rendered);
+    String trimmed = rendered.strip();
+
+    if (trimmed.length() == rendered.length()) {
+      trimmed = StreamSupport.stream(components.keySet().spliterator(), false)
+          .map(key -> components.get(key).toString())
+          .collect(Collectors.joining(", "));
+    }
+    return trimmed + "\n";
   }
 
   JsonNode chooseTemplateText(JsonNode template, Map<String, Object> components) {
@@ -436,6 +455,41 @@ class AddressFormatter {
     return result;
   }
 
+  String cleanupRender(String rendered) {
+    Map<String, String> replacements = Map.ofEntries(
+        entry("[\\},\\s]+$", ""),
+        entry("^[,\\s]+", ""),
+        entry("^- ", ""),
+        entry(",\\s*,", ", "),
+        entry("[ \\t]+,[ \\t]+", ", "),
+        entry("[ \\t][ \\t]+", " "),
+        entry("[ \\t]\\n", "\\n"),
+        entry("\\n,", "\\n"),
+        entry(",,+", ","),
+        entry(",\\n", "\\n"),
+        entry("\\n[ \\t]+", "\\n"),
+        entry("\\n\\n+", "\\n")
+    );
+
+    Set<Map.Entry<String, String>> entries = replacements.entrySet();
+    String deduped = null;
+
+    for(Map.Entry<String, String> replacement : entries) {
+      Pattern p = Pattern.compile(replacement.getKey(), Pattern.UNICODE_CHARACTER_CLASS);
+      Matcher m = p.matcher(rendered);
+      deduped = dedupe(m.replaceAll(replacement.getValue()));
+    }
+
+    return deduped;
+  }
+
+  String dedupe(String rendered) {
+    String deduped = Arrays.stream(rendered.split("\n"))
+        .map(s -> Arrays.stream(s.trim().split(", "))
+            .map(s2 -> s2.trim()).collect(Collectors.joining(", ")))
+        .collect(Collectors.joining("\n"));
+    return deduped;
+  }
   public static void main(String[] args) {
     AddressFormatter formatter = new AddressFormatter(OutputType.STRING, false, false);
     try {
