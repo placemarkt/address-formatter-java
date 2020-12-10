@@ -6,19 +6,23 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.databind.type.MapType;
+import com.github.mustachejava.*;
 import com.google.common.primitives.Ints;
 import java.io.IOException;
+import java.io.StringWriter;
+import java.io.StringReader;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.function.Function;
 import com.google.common.base.CaseFormat;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import java.util.Optional;
 
@@ -231,12 +235,15 @@ class AddressFormatter {
       String countyCode = getCountyCode(components.get("county").toString(), components.get("country_code").toString());
     }
 
-    List<String> unknownComponents = StreamSupport.stream(components.keySet().spliterator(), false).filter(component-> {
-      if (knownComponents.contains(component)) {
-        return true;
+    List<String> unknownComponents = components.entrySet().stream().filter(component -> {
+      if (component.getKey() == null) {
+        return false;
       }
-      return false;
-    }).collect(Collectors.toList());
+      if (knownComponents.contains(component.getKey())) {
+        return false;
+      }
+      return true;
+    }).map(component -> component.getValue().toString()).collect(Collectors.toList());
 
     if (unknownComponents.size() > 0) {
       components.put("attention", String.join(", ", unknownComponents));
@@ -283,18 +290,20 @@ class AddressFormatter {
 
     Pattern p = Pattern.compile("^https?:\\/\\/");
     return components.entrySet().stream().filter(component -> {
+      if (component.getValue() == null) {
+        return false;
+      }
+
       Matcher m = p.matcher(component.getValue().toString());
+
       if (m.matches()) {
         m.reset();
         return false;
       }
+
       m.reset();
       return true;
     }).collect(Collectors.toMap(Entry::getKey, Entry::getValue));
-  }
-
-  public static void main(String[] args) {
-    System.out.println(abbreviations);
   }
 
   String getStateCode(String state, String countryCode) {
@@ -350,11 +359,53 @@ class AddressFormatter {
     }
   }
 
-  public String format(String json) throws IOException {
+  String renderTemplate(JsonNode template, Map<String, Object> components) {
+
+    Map<String, Object> callback = new HashMap<>();
+    callback.put("first", new Function<String, String>() {
+      @Override
+      public String apply(String s) {
+        return "TEST";
+      }
+    });
+
+    JsonNode templateText = chooseTemplateText(template, components);
+    MustacheFactory mf = new DefaultMustacheFactory();
+    Mustache m = mf.compile(new StringReader(templateText.asText()), "example");
+    StringWriter st = new StringWriter();
+    m.execute(st, new Object[]{ components, callback});
+    String formatted = st.toString();
+    return formatted;
+  }
+
+  JsonNode chooseTemplateText(JsonNode template, Map<String, Object> components) {
+    JsonNode selected;
+    if (template.has("address_template")) {
+      selected = worldwide.get(template.get("address_template").textValue());
+    } else {
+      JsonNode defaults = worldwide.get("default");
+      selected = worldwide.get(defaults.get("address_template").textValue());
+    }
+
+    List<String> required = Arrays.asList("road", "postcode");
+    Long count = required.stream().filter(req -> !components.containsKey(req) ? true : false).count();
+    if (count == 2) {
+      if (template.has("fallback_template")) {
+        selected = worldwide.get(template.get("fallback_template").textValue());
+      } else {
+        JsonNode defaults = worldwide.get("default");
+        selected = worldwide.get(defaults.get("fallback_template").textValue());
+      }
+    }
+    return selected;
+  }
+
+
+  String format(String json) throws IOException {
     return format(json, null);
   }
 
-  public String format(String json, String fallbackCountryCode) throws IOException {
+  String format(String json, String fallbackCountryCode) throws IOException {
     TypeFactory factory = TypeFactory.defaultInstance();
     MapType type = factory.constructMapType(HashMap.class, String.class, String.class);
     Map<String, Object> components = yamlReader.readValue(json, type);
@@ -374,8 +425,28 @@ class AddressFormatter {
     components = applyAliases(components);
     JsonNode template = findTemplate(components);
     components = cleanupInput(components, template.get("replace"));
+    String result = renderTemplate(template, components);
 
-    return "";
+    return result;
+  }
+
+  public static void main(String[] args) {
+    AddressFormatter formatter = new AddressFormatter(OutputType.STRING, false, false);
+    try {
+      String formatted = formatter.format("{building: Ambassade de Russie, "
+          + "city: Bamako, "
+          + "country: Mali, "
+          + "country_code: ml, "
+          + "county: Bamako District, "
+          + "postcode: E4373, "
+          + "road: Rue 415, "
+          + "state: Bamako District, "
+          + "pub: PUB NAME, "
+          + "suburb: Niaréla)}");
+      System.out.println(formatted);
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
   }
 
   public enum OutputType {STRING, ARRAY}
