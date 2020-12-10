@@ -365,7 +365,13 @@ class AddressFormatter {
     callback.put("first", new Function<String, String>() {
       @Override
       public String apply(String s) {
-        return "TEST";
+        String[] splitted = s.split("\\s*\\|\\|\\s*");
+        Optional<String> chosen = Arrays.stream(splitted).filter(v -> v.length() > 0).findFirst();
+        if (chosen.isPresent()) {
+          return chosen.get();
+        } else {
+          return "";
+        }
       }
     });
 
