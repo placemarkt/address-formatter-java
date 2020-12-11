@@ -18,12 +18,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.function.Function;
 import com.google.common.base.CaseFormat;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import java.util.Optional;
 import static java.util.Map.entry;
@@ -67,7 +70,7 @@ class AddressFormatter {
       String field = entry.getKey();
       Object value = entry.getValue();
       String newField = CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, field);
-      if (!normalizedComponents.containsKey(newField) && knownComponents.contains(newField)) {
+      if (!normalizedComponents.containsKey(newField)) {
         normalizedComponents.put(newField, value);
       }
     }
@@ -120,11 +123,12 @@ class AddressFormatter {
           }
           components.put("country", newCountry);
         }
+        components.put("country", newCountry);
 
         JsonNode oldCountry = worldwide.get(oldCountryCode);
         JsonNode oldCountryAddComponent = oldCountry.get("add_component");
         if (oldCountryAddComponent != null && oldCountryAddComponent.toString().contains("=")) {
-          String[] pairs = oldCountryAddComponent.toString().split("=");
+          String[] pairs = oldCountryAddComponent.textValue().split("=");
           if (pairs[0].equals("state")) {
             components.put("state", pairs[1]);
           }
@@ -188,7 +192,6 @@ class AddressFormatter {
   }
 
   Map<String, Object> cleanupInput(Map<String, Object> components, JsonNode replacements) {
-    Map<String, Object> cleanedComponents = new HashMap<>();
     Object country = components.get("country");
     Object state = components.get("state");
 
@@ -213,8 +216,8 @@ class AddressFormatter {
             }
           } else {
             Pattern p2 = Pattern.compile(replacement.get(0).asText());
-            Matcher m2 = p2.matcher(component);
-            String value = m.replaceAll(replacement.get(1).asText());
+            Matcher m2 = p2.matcher(components.get(component).toString());
+            String value = m2.replaceAll(replacement.get(1).asText());
             components.put(component, value);
           }
         }
@@ -312,23 +315,28 @@ class AddressFormatter {
     if (!stateCodes.has(countryCode)) {
       return null;
     }
-    JsonNode country = stateCodes.get(countryCode);
-    Optional<JsonNode> stateCode = StreamSupport.stream(country.spliterator(), true).filter(posState-> {
-      if (posState.isObject()) {
-        if (posState.has("default")) {
-          if (posState.get("default").asText().toUpperCase().equals(state.toUpperCase())) {
+
+    JsonNode countryCodes = stateCodes.get(countryCode);
+    Iterator<String> iterator = countryCodes.fieldNames();
+    Optional<String> stateCode = StreamSupport
+        .stream(Spliterators.spliteratorUnknownSize(iterator,
+        Spliterator.ORDERED), false).filter(key-> {
+          JsonNode code = countryCodes.get(key);
+      if (code.isObject()) {
+        if (code.has("default")) {
+          if (code.get("default").asText().toUpperCase().equals(state.toUpperCase())) {
             return true;
           }
         }
       } else {
-        if (posState.asText().toUpperCase().equals(state.toUpperCase())) {
+        if (code.asText().toUpperCase().equals(state.toUpperCase())) {
           return true;
         }
       }
       return false;
     }).findFirst();
     if (stateCode.isPresent()) {
-      return stateCode.get().asText();
+      return stateCode.get();
     } else {
       return null;
     }
@@ -395,18 +403,17 @@ class AddressFormatter {
     rendered = cleanupRender(rendered);
     String trimmed = rendered.strip();
 
-    if (trimmed.length() == rendered.length()) {
-      trimmed = StreamSupport.stream(components.keySet().spliterator(), false)
-          .map(key -> components.get(key).toString())
-          .collect(Collectors.joining(", "));
-    }
     return trimmed + "\n";
   }
 
   JsonNode chooseTemplateText(JsonNode template, Map<String, Object> components) {
     JsonNode selected;
     if (template.has("address_template")) {
-      selected = worldwide.get(template.get("address_template").textValue());
+      if (worldwide.has(template.get("address_template").asText())) {
+        selected = worldwide.get(template.get("address_template").asText());
+      } else {
+        selected = template.get("address_template");
+      }
     } else {
       JsonNode defaults = worldwide.get("default");
       selected = worldwide.get(defaults.get("address_template").textValue());
@@ -416,7 +423,7 @@ class AddressFormatter {
     Long count = required.stream().filter(req -> !components.containsKey(req) ? true : false).count();
     if (count == 2) {
       if (template.has("fallback_template")) {
-        selected = worldwide.get(template.get("fallback_template").textValue());
+        selected = template.get("fallback_template");
       } else {
         JsonNode defaults = worldwide.get("default");
         selected = worldwide.get(defaults.get("fallback_template").textValue());
@@ -461,23 +468,24 @@ class AddressFormatter {
         entry("^[,\\s]+", ""),
         entry("^- ", ""),
         entry(",\\s*,", ", "),
-        entry("[ \\t]+,[ \\t]+", ", "),
-        entry("[ \\t][ \\t]+", " "),
-        entry("[ \\t]\\n", "\\n"),
-        entry("\\n,", "\\n"),
-        entry(",,+", ","),
-        entry(",\\n", "\\n"),
-        entry("\\n[ \\t]+", "\\n"),
-        entry("\\n\\n+", "\\n")
+        entry("[ \t]+,[ \t]+", ", "),
+        entry("[ \t][ \t]+", " "),
+        entry("[ \t]\n", "\n"),
+        entry("\n,", "\n"),
+        entry(",+", ","),
+        entry(",\n", "\n"),
+        entry("\n[ \t]+", "\n"),
+        entry("\n+", "\n")
     );
 
     Set<Map.Entry<String, String>> entries = replacements.entrySet();
-    String deduped = null;
+    String deduped = rendered;
 
     for(Map.Entry<String, String> replacement : entries) {
       Pattern p = Pattern.compile(replacement.getKey(), Pattern.UNICODE_CHARACTER_CLASS);
-      Matcher m = p.matcher(rendered);
-      deduped = dedupe(m.replaceAll(replacement.getValue()));
+      Matcher m = p.matcher(deduped);
+      String predupe = m.replaceAll(replacement.getValue());
+      deduped = dedupe(predupe);
     }
 
     return deduped;
@@ -493,16 +501,28 @@ class AddressFormatter {
   public static void main(String[] args) {
     AddressFormatter formatter = new AddressFormatter(OutputType.STRING, false, false);
     try {
-      String formatted = formatter.format("{building: Ambassade de Russie, "
-          + "city: Bamako, "
-          + "country: Mali, "
-          + "country_code: ml, "
-          + "county: Bamako District, "
-          + "postcode: E4373, "
-          + "road: Rue 415, "
-          + "state: Bamako District, "
-          + "pub: PUB NAME, "
-          + "suburb: Niaréla)}");
+      String formatted = formatter.format("{building: Executive Office Building (American Samoa Government),"
+          + "country: American Samoa,"
+          + "country_code: as,"
+          + "county: Ituau,"
+          + "postcode: 96799,"
+          + "road: Route 001,"
+          + "village: Faganeanea}");
+    //  String formatted = formatter.format("{country: Montserrat,"
+    //      + "country_code: ms,"
+    //      + "county: Saint Peter,"
+    //      + "public_building: Government Headquarters,"
+    //      + "road: Farer Plaza,"
+    //      + "suburb: Gerald's,"
+    //      + "town: Brades}");
+    //  String formatted = formatter.format("{city: Port Moresby,"
+    //      + "country: Papua New Guinea,"
+    //      + "country_code: pg,"
+    //      + "county: National Capital District,"
+    //      + "hotel: Crowne Plaza Hotel,"
+    //      + "road: Mary Street,"
+    //      + "state: National Capital District,"
+    //      + "suburb: Ela Beach}");
       System.out.println(formatted);
     } catch (Exception e) {
       e.printStackTrace();
