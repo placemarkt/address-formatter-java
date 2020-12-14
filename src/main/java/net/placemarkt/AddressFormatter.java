@@ -26,7 +26,6 @@ import java.util.Map.Entry;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import java.util.Optional;
 import static java.util.Map.entry;
@@ -78,7 +77,7 @@ class AddressFormatter {
   }
 
   Map<String, Object> determineCountryCode(Map<String, Object> components,
-      String fallbackCountryCode) {
+    String fallbackCountryCode) {
     String countryCode;
 
     if (components.get("country_code") != null) {
@@ -124,14 +123,14 @@ class AddressFormatter {
           components.put("country", newCountry);
         }
         components.put("country", newCountry);
+      }
 
-        JsonNode oldCountry = worldwide.get(oldCountryCode);
-        JsonNode oldCountryAddComponent = oldCountry.get("add_component");
-        if (oldCountryAddComponent != null && oldCountryAddComponent.toString().contains("=")) {
-          String[] pairs = oldCountryAddComponent.textValue().split("=");
-          if (pairs[0].equals("state")) {
-            components.put("state", pairs[1]);
-          }
+      JsonNode oldCountry = worldwide.get(oldCountryCode);
+      JsonNode oldCountryAddComponent = oldCountry.get("add_component");
+      if (oldCountryAddComponent != null && oldCountryAddComponent.toString().contains("=")) {
+        String[] pairs = oldCountryAddComponent.textValue().split("=");
+        if (pairs[0].equals("state")) {
+          components.put("state", pairs[1]);
         }
       }
     }
@@ -173,7 +172,7 @@ class AddressFormatter {
           break;
         }
       }
-
+      aliasedComponents.put(key, newValue);
       aliasedComponents.put(newKey, newValue);
     });
 
@@ -201,22 +200,25 @@ class AddressFormatter {
     }
     if (replacements != null && replacements.size() > 0) {
       Iterator<String> cIterator = components.keySet().iterator();
-      Iterator<JsonNode> rIterator = replacements.iterator();
       while (cIterator.hasNext()) {
+        Iterator<JsonNode> rIterator = replacements.iterator();
         String component = cIterator.next();
-        Pattern p = Pattern.compile(String.format("^\\$%s=", component));
+        String regex = String.format("^%s=", component);
+        Pattern p = Pattern.compile(regex);
+        String test = components.get(component).toString();
         while (rIterator.hasNext()) {
           ArrayNode replacement = (ArrayNode) rIterator.next();
           Matcher m = p.matcher(replacement.get(0).asText());
           if (m.find()) {
             m.reset();
-            String value = m.replaceAll(replacement.get(0).asText());
+            String value = m.replaceAll("");
             if (components.get(component).toString().equals(value)) {
-              components.put(component, replacement.get(1));
+              components.put(component, replacement.get(1).asText());
             }
+            m.reset();
           } else {
             Pattern p2 = Pattern.compile(replacement.get(0).asText());
-            Matcher m2 = p2.matcher(components.get(component).toString());
+            Matcher m2 = p2.matcher(test);
             String value = m2.replaceAll(replacement.get(1).asText());
             components.put(component, value);
           }
@@ -424,6 +426,11 @@ class AddressFormatter {
     if (count == 2) {
       if (template.has("fallback_template")) {
         selected = template.get("fallback_template");
+        if (worldwide.has(template.get("fallback_template").asText())) {
+          selected = worldwide.get(template.get("fallback_template").asText());
+        } else {
+          selected = template.get("fallback_template");
+        }
       } else {
         JsonNode defaults = worldwide.get("default");
         selected = worldwide.get(defaults.get("fallback_template").textValue());
@@ -501,28 +508,15 @@ class AddressFormatter {
   public static void main(String[] args) {
     AddressFormatter formatter = new AddressFormatter(OutputType.STRING, false, false);
     try {
-      String formatted = formatter.format("{building: Executive Office Building (American Samoa Government),"
-          + "country: American Samoa,"
-          + "country_code: as,"
-          + "county: Ituau,"
-          + "postcode: 96799,"
-          + "road: Route 001,"
-          + "village: Faganeanea}");
-    //  String formatted = formatter.format("{country: Montserrat,"
-    //      + "country_code: ms,"
-    //      + "county: Saint Peter,"
-    //      + "public_building: Government Headquarters,"
-    //      + "road: Farer Plaza,"
-    //      + "suburb: Gerald's,"
-    //      + "town: Brades}");
-    //  String formatted = formatter.format("{city: Port Moresby,"
-    //      + "country: Papua New Guinea,"
-    //      + "country_code: pg,"
-    //      + "county: National Capital District,"
-    //      + "hotel: Crowne Plaza Hotel,"
-    //      + "road: Mary Street,"
-    //      + "state: National Capital District,"
-    //      + "suburb: Ela Beach}");
+
+      String formatted = formatter.format("{city: Djibouti,"
+          + "country: Djibouti,"
+          + "country_code: dj,"
+          + "neighbourhood: Place Mahmoud Harbi,"
+          + "restaurant: Blue Nile,"
+          + "road: Ethiopia Street,"
+          + "state: Djibouti,"
+          + "suburb: District 1}");
       System.out.println(formatted);
     } catch (Exception e) {
       e.printStackTrace();
