@@ -39,7 +39,22 @@ class AddressFormatter {
   private static final JsonNode country2Lang = TemplateProcessor.transpileCountry2Lang();
   private static final JsonNode countyCodes = TemplateProcessor.transpileCountyCodes();
   private static final JsonNode stateCodes = TemplateProcessor.transpileStateCodes();
-  private static final List knownComponents = getKnownComponents();
+  private static final List<String> knownComponents = getKnownComponents();
+  private static final Map<String, String> replacements = Map.ofEntries(
+      entry("[\\},\\s]+$", ""),
+      entry("^[,\\s]+", ""),
+      entry("^- ", ""),
+      entry(",\\s*,", ", "),
+      entry("[ \t]+,[ \t]+", ", "),
+      entry("[ \t][ \t]+", " "),
+      entry("[ \t]\n", "\n"),
+      entry("\n,", "\n"),
+      entry(",+", ","),
+      entry(",\n", "\n"),
+      entry("\n[ \t]+", "\n"),
+      entry("\n+", "\n")
+  );
+
 
   private static List<String> getKnownComponents() {
     List<String> knownComponents = new ArrayList<>();
@@ -162,7 +177,6 @@ class AddressFormatter {
     Map<String, Object> aliasedComponents = new HashMap<>();
     components.forEach((key, value) -> {
       String newKey = key;
-      Object newValue = value;
       Iterator<JsonNode> iterator = aliases.elements();
       while (iterator.hasNext()) {
         JsonNode pair = iterator.next();
@@ -172,8 +186,8 @@ class AddressFormatter {
           break;
         }
       }
-      aliasedComponents.put(key, newValue);
-      aliasedComponents.put(newKey, newValue);
+      aliasedComponents.put(key, value);
+      aliasedComponents.put(newKey, value);
     });
 
     return aliasedComponents;
@@ -199,10 +213,8 @@ class AddressFormatter {
       components.remove("state");
     }
     if (replacements != null && replacements.size() > 0) {
-      Iterator<String> cIterator = components.keySet().iterator();
-      while (cIterator.hasNext()) {
+      for (String component : components.keySet()) {
         Iterator<JsonNode> rIterator = replacements.iterator();
-        String component = cIterator.next();
         String regex = String.format("^%s=", component);
         Pattern p = Pattern.compile(regex);
         while (rIterator.hasNext()) {
@@ -246,10 +258,7 @@ class AddressFormatter {
       if (component.getKey() == null) {
         return false;
       }
-      if (knownComponents.contains(component.getKey())) {
-        return false;
-      }
-      return true;
+      return !knownComponents.contains(component.getKey());
     }).map(component -> component.getValue().toString()).collect(Collectors.toList());
 
     if (unknownComponents.size() > 0) {
@@ -281,17 +290,15 @@ class AddressFormatter {
             JsonNode languageAbbreviations = abbreviations.get(language.textValue());
             StreamSupport.stream(languageAbbreviations.spliterator(), false)
                 .filter(abbreviation -> abbreviation.has("component"))
-                .forEach(abbreviation -> {
-                  StreamSupport.stream(abbreviation.get("replacements").spliterator(), false)
-                      .forEach(replacement -> {
-                         String oldComponent = components.get(abbreviation).toString();
-                         String regex = String.format("\b%s\b", replacements.get("src").asText());
-                         Pattern p = Pattern.compile(regex);
-                         Matcher m = p.matcher(oldComponent);
-                         String newComponent = m.replaceFirst(replacement.get("dest").asText());
-                         components.put(abbreviation.toString(), newComponent);
-                      });
-                });
+                .forEach(abbreviation -> StreamSupport.stream(abbreviation.get("replacements").spliterator(), false)
+                    .forEach(replacement -> {
+                       String oldComponent = components.get(abbreviation).toString();
+                       String regex = String.format("\b%s\b", replacements.get("src").asText());
+                       Pattern p = Pattern.compile(regex);
+                       Matcher m = p.matcher(oldComponent);
+                       String newComponent = m.replaceFirst(replacement.get("dest").asText());
+                       components.put(abbreviation.toString(), newComponent);
+                    }));
           });
     }
 
@@ -326,14 +333,10 @@ class AddressFormatter {
           JsonNode code = countryCodes.get(key);
       if (code.isObject()) {
         if (code.has("default")) {
-          if (code.get("default").asText().toUpperCase().equals(state.toUpperCase())) {
-            return true;
-          }
+          return code.get("default").asText().toUpperCase().equals(state.toUpperCase());
         }
       } else {
-        if (code.asText().toUpperCase().equals(state.toUpperCase())) {
-          return true;
-        }
+        return code.asText().toUpperCase().equals(state.toUpperCase());
       }
       return false;
     }).findFirst();
@@ -352,14 +355,10 @@ class AddressFormatter {
     Optional<JsonNode> countyCode = StreamSupport.stream(country.spliterator(), true).filter(posCounty -> {
       if (posCounty.isObject()) {
         if (posCounty.has("default")) {
-          if (posCounty.get("default").asText().toUpperCase().equals(county.toUpperCase())) {
-            return true;
-          }
+          return posCounty.get("default").asText().toUpperCase().equals(county.toUpperCase());
         }
       } else {
-        if (posCounty.asText().toUpperCase().equals(county.toUpperCase())) {
-          return true;
-        }
+        return posCounty.asText().toUpperCase().equals(county.toUpperCase());
       }
       return false;
     }).findFirst();
@@ -421,7 +420,7 @@ class AddressFormatter {
     }
 
     List<String> required = Arrays.asList("road", "postcode");
-    Long count = required.stream().filter(req -> !components.containsKey(req) ? true : false).count();
+    Long count = required.stream().filter(req -> !components.containsKey(req)).count();
     if (count == 2) {
       if (template.has("fallback_template")) {
         selected = template.get("fallback_template");
@@ -469,21 +468,6 @@ class AddressFormatter {
   }
 
   String cleanupRender(String rendered) {
-    Map<String, String> replacements = Map.ofEntries(
-        entry("[\\},\\s]+$", ""),
-        entry("^[,\\s]+", ""),
-        entry("^- ", ""),
-        entry(",\\s*,", ", "),
-        entry("[ \t]+,[ \t]+", ", "),
-        entry("[ \t][ \t]+", " "),
-        entry("[ \t]\n", "\n"),
-        entry("\n,", "\n"),
-        entry(",+", ","),
-        entry(",\n", "\n"),
-        entry("\n[ \t]+", "\n"),
-        entry("\n+", "\n")
-    );
-
     Set<Map.Entry<String, String>> entries = replacements.entrySet();
     String deduped = rendered;
 
