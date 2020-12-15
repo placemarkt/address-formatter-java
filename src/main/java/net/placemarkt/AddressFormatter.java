@@ -205,7 +205,6 @@ class AddressFormatter {
         String component = cIterator.next();
         String regex = String.format("^%s=", component);
         Pattern p = Pattern.compile(regex);
-        String test = components.get(component).toString();
         while (rIterator.hasNext()) {
           ArrayNode replacement = (ArrayNode) rIterator.next();
           Matcher m = p.matcher(replacement.get(0).asText());
@@ -218,8 +217,9 @@ class AddressFormatter {
             m.reset();
           } else {
             Pattern p2 = Pattern.compile(replacement.get(0).asText());
-            Matcher m2 = p2.matcher(test);
+            Matcher m2 = p2.matcher(components.get(component).toString());
             String value = m2.replaceAll(replacement.get(1).asText());
+            m.reset();
             components.put(component, value);
           }
         }
