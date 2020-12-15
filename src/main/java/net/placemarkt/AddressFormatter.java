@@ -54,7 +54,7 @@ class AddressFormatter {
       entry("\n[ \t]+", "\n"),
       entry("\n+", "\n")
   );
-
+  private static final RegexCache regexCache = new RegexCache();
 
   private static List<String> getKnownComponents() {
     List<String> knownComponents = new ArrayList<>();
@@ -76,6 +76,33 @@ class AddressFormatter {
     this.outputType = outputType;
     this.abbreviate = abbreviate;
     this.appendCountry = appendCountry;
+  }
+
+  String format(String json) throws IOException {
+    return format(json, null);
+  }
+
+  String format(String json, String fallbackCountryCode) throws IOException {
+    TypeFactory factory = TypeFactory.defaultInstance();
+    MapType type = factory.constructMapType(HashMap.class, String.class, String.class);
+    Map<String, Object> components = yamlReader.readValue(json, type);
+    components = normalizeFields(components);
+
+    if (fallbackCountryCode != null) {
+      components.put("countryCode", fallbackCountryCode);
+    }
+
+    components = determineCountryCode(components, fallbackCountryCode);
+    String countryCode = components.get("country_code").toString();
+
+    if (appendCountry && countryNames.has(countryCode) && components.get("country") == null) {
+      components.put("country", countryNames.get(countryCode).asText());
+    }
+
+    components = applyAliases(components);
+    JsonNode template = findTemplate(components);
+    components = cleanupInput(components, template.get("replace"));
+    return renderTemplate(template, components);
   }
 
   Map<String, Object> normalizeFields(Map<String, Object> components) {
@@ -173,37 +200,6 @@ class AddressFormatter {
     return components;
   }
 
-  Map<String, Object> applyAliases(Map<String, Object> components) {
-    Map<String, Object> aliasedComponents = new HashMap<>();
-    components.forEach((key, value) -> {
-      String newKey = key;
-      Iterator<JsonNode> iterator = aliases.elements();
-      while (iterator.hasNext()) {
-        JsonNode pair = iterator.next();
-        if (pair.get("alias").asText().equals(key)
-            && components.get(pair.get("name").asText()) == null) {
-          newKey = pair.get("name").asText();
-          break;
-        }
-      }
-      aliasedComponents.put(key, value);
-      aliasedComponents.put(newKey, value);
-    });
-
-    return aliasedComponents;
-  }
-
-  JsonNode findTemplate(Map<String, Object> components) {
-    JsonNode template;
-    if (worldwide.has(components.get("country_code").toString())) {
-      template = worldwide.get(components.get("country_code").toString());
-    } else {
-      template = worldwide.get("default");
-    }
-
-    return template;
-  }
-
   Map<String, Object> cleanupInput(Map<String, Object> components, JsonNode replacements) {
     Object country = components.get("country");
     Object state = components.get("state");
@@ -252,6 +248,7 @@ class AddressFormatter {
 
     if (!components.containsKey("county_code") && components.containsKey("county")) {
       String countyCode = getCountyCode(components.get("county").toString(), components.get("country_code").toString());
+      components.put("county_code", countyCode);
     }
 
     List<String> unknownComponents = components.entrySet().stream().filter(component -> {
@@ -286,23 +283,21 @@ class AddressFormatter {
       JsonNode languages = country2Lang.get(components.get("country_code").toString());
       StreamSupport.stream(languages.spliterator(), false)
           .filter(language -> abbreviations.has(language.textValue()))
-          .forEach(language -> {
-            JsonNode languageAbbreviations = abbreviations.get(language.textValue());
-            StreamSupport.stream(languageAbbreviations.spliterator(), false)
-                .filter(abbreviation -> abbreviation.has("component"))
-                .forEach(abbreviation -> StreamSupport.stream(abbreviation.get("replacements").spliterator(), false)
-                    .forEach(replacement -> {
-                       String oldComponent = components.get(abbreviation).toString();
-                       String regex = String.format("\b%s\b", replacements.get("src").asText());
-                       Pattern p = Pattern.compile(regex);
-                       Matcher m = p.matcher(oldComponent);
-                       String newComponent = m.replaceFirst(replacement.get("dest").asText());
-                       components.put(abbreviation.toString(), newComponent);
-                    }));
-          });
+          .map(language -> abbreviations.get(language.textValue())).forEach(
+          languageAbbreviations -> StreamSupport.stream(languageAbbreviations.spliterator(), false)
+              .filter(abbreviation -> abbreviation.has("component"))
+              .forEach(abbreviation -> StreamSupport.stream(abbreviation.get("replacements").spliterator(), false)
+                  .forEach(replacement -> {
+                    String oldComponent = components.get(abbreviation).toString();
+                    String regex = String.format("\b%s\b", replacements.get("src").asText());
+                    Pattern p = Pattern.compile(regex);
+                    Matcher m = p.matcher(oldComponent);
+                    String newComponent = m.replaceFirst(replacement.get("dest").asText());
+                    components.put(abbreviation.toString(), newComponent);
+                  })));
     }
 
-    Pattern p = Pattern.compile("^https?:\\/\\/");
+    Pattern p = Pattern.compile("^https?://");
     return components.entrySet().stream().filter(component -> {
       if (component.getValue() == null) {
         return false;
@@ -320,6 +315,67 @@ class AddressFormatter {
     }).collect(Collectors.toMap(Entry::getKey, Entry::getValue));
   }
 
+  Map<String, Object> applyAliases(Map<String, Object> components) {
+    Map<String, Object> aliasedComponents = new HashMap<>();
+    components.forEach((key, value) -> {
+      String newKey = key;
+      Iterator<JsonNode> iterator = aliases.elements();
+      while (iterator.hasNext()) {
+        JsonNode pair = iterator.next();
+        if (pair.get("alias").asText().equals(key)
+            && components.get(pair.get("name").asText()) == null) {
+          newKey = pair.get("name").asText();
+          break;
+        }
+      }
+      aliasedComponents.put(key, value);
+      aliasedComponents.put(newKey, value);
+    });
+
+    return aliasedComponents;
+  }
+
+  JsonNode findTemplate(Map<String, Object> components) {
+    JsonNode template;
+    if (worldwide.has(components.get("country_code").toString())) {
+      template = worldwide.get(components.get("country_code").toString());
+    } else {
+      template = worldwide.get("default");
+    }
+
+    return template;
+  }
+
+  JsonNode chooseTemplateText(JsonNode template, Map<String, Object> components) {
+    JsonNode selected;
+    if (template.has("address_template")) {
+      if (worldwide.has(template.get("address_template").asText())) {
+        selected = worldwide.get(template.get("address_template").asText());
+      } else {
+        selected = template.get("address_template");
+      }
+    } else {
+      JsonNode defaults = worldwide.get("default");
+      selected = worldwide.get(defaults.get("address_template").textValue());
+    }
+
+    List<String> required = Arrays.asList("road", "postcode");
+    long count = required.stream().filter(req -> !components.containsKey(req)).count();
+    if (count == 2) {
+      if (template.has("fallback_template")) {
+        if (worldwide.has(template.get("fallback_template").asText())) {
+          selected = worldwide.get(template.get("fallback_template").asText());
+        } else {
+          selected = template.get("fallback_template");
+        }
+      } else {
+        JsonNode defaults = worldwide.get("default");
+        selected = worldwide.get(defaults.get("fallback_template").textValue());
+      }
+    }
+    return selected;
+  }
+
   String getStateCode(String state, String countryCode) {
     if (!stateCodes.has(countryCode)) {
       return null;
@@ -327,7 +383,7 @@ class AddressFormatter {
 
     JsonNode countryCodes = stateCodes.get(countryCode);
     Iterator<String> iterator = countryCodes.fieldNames();
-    Optional<String> stateCode = StreamSupport
+    return StreamSupport
         .stream(Spliterators.spliteratorUnknownSize(iterator,
         Spliterator.ORDERED), false).filter(key-> {
           JsonNode code = countryCodes.get(key);
@@ -339,12 +395,7 @@ class AddressFormatter {
         return code.asText().toUpperCase().equals(state.toUpperCase());
       }
       return false;
-    }).findFirst();
-    if (stateCode.isPresent()) {
-      return stateCode.get();
-    } else {
-      return null;
-    }
+    }).findFirst().orElse(null);
   }
 
   String getCountyCode(String county, String countryCode) {
@@ -363,26 +414,15 @@ class AddressFormatter {
       return false;
     }).findFirst();
 
-    if (countyCode.isPresent()) {
-      return countyCode.get().asText();
-    } else {
-      return null;
-    }
+    return countyCode.map(JsonNode::asText).orElse(null);
   }
 
   String renderTemplate(JsonNode template, Map<String, Object> components) {
     Map<String, Object> callback = new HashMap<>();
-    callback.put("first", new Function<String, String>() {
-      @Override
-      public String apply(String s) {
-        String[] splitted = s.split("\\s*\\|\\|\\s*");
-        Optional<String> chosen = Arrays.stream(splitted).filter(v -> v.length() > 0).findFirst();
-        if (chosen.isPresent()) {
-          return chosen.get();
-        } else {
-          return "";
-        }
-      }
+    callback.put("first", (Function<String, String>) s -> {
+      String[] splitted = s.split("\\s*\\|\\|\\s*");
+      Optional<String> chosen = Arrays.stream(splitted).filter(v -> v.length() > 0).findFirst();
+      return chosen.orElse("");
     });
 
     JsonNode templateText = chooseTemplateText(template, components);
@@ -406,67 +446,6 @@ class AddressFormatter {
     return trimmed + "\n";
   }
 
-  JsonNode chooseTemplateText(JsonNode template, Map<String, Object> components) {
-    JsonNode selected;
-    if (template.has("address_template")) {
-      if (worldwide.has(template.get("address_template").asText())) {
-        selected = worldwide.get(template.get("address_template").asText());
-      } else {
-        selected = template.get("address_template");
-      }
-    } else {
-      JsonNode defaults = worldwide.get("default");
-      selected = worldwide.get(defaults.get("address_template").textValue());
-    }
-
-    List<String> required = Arrays.asList("road", "postcode");
-    Long count = required.stream().filter(req -> !components.containsKey(req)).count();
-    if (count == 2) {
-      if (template.has("fallback_template")) {
-        selected = template.get("fallback_template");
-        if (worldwide.has(template.get("fallback_template").asText())) {
-          selected = worldwide.get(template.get("fallback_template").asText());
-        } else {
-          selected = template.get("fallback_template");
-        }
-      } else {
-        JsonNode defaults = worldwide.get("default");
-        selected = worldwide.get(defaults.get("fallback_template").textValue());
-      }
-    }
-    return selected;
-  }
-
-
-  String format(String json) throws IOException {
-    return format(json, null);
-  }
-
-  String format(String json, String fallbackCountryCode) throws IOException {
-    TypeFactory factory = TypeFactory.defaultInstance();
-    MapType type = factory.constructMapType(HashMap.class, String.class, String.class);
-    Map<String, Object> components = yamlReader.readValue(json, type);
-    components = normalizeFields(components);
-
-    if (fallbackCountryCode != null) {
-      components.put("countryCode", fallbackCountryCode);
-    }
-
-    components = determineCountryCode(components, fallbackCountryCode);
-    String countryCode = components.get("country_code").toString();
-
-    if (appendCountry && countryNames.has(countryCode) && components.get("country") == null) {
-      components.put("country", countryNames.get(countryCode).asText());
-    }
-
-    components = applyAliases(components);
-    JsonNode template = findTemplate(components);
-    components = cleanupInput(components, template.get("replace"));
-    String result = renderTemplate(template, components);
-
-    return result;
-  }
-
   String cleanupRender(String rendered) {
     Set<Map.Entry<String, String>> entries = replacements.entrySet();
     String deduped = rendered;
@@ -482,32 +461,11 @@ class AddressFormatter {
   }
 
   String dedupe(String rendered) {
-    String deduped = Arrays.stream(rendered.split("\n"))
+     return Arrays.stream(rendered.split("\n"))
         .map(s -> Arrays.stream(s.trim().split(", "))
-            .map(s2 -> s2.trim()).distinct().collect(Collectors.joining(", ")))
+            .map(String::trim).distinct().collect(Collectors.joining(", ")))
         .distinct()
         .collect(Collectors.joining("\n"));
-    return deduped;
-  }
-  public static void main(String[] args) {
-    AddressFormatter formatter = new AddressFormatter(OutputType.STRING, false, false);
-    try {
-
-      String formatted = formatter.format("{city: London Borough of Islington,"
-          + "country: United Kingdom,"
-          + "country_code: GB,"
-          + "county: London,"
-          + "house: Lokku Ltd,"
-          + "house_number: 82,"
-          + "postcode: EC1M 5RF,"
-          + "road: Clerkenwell Road,"
-          + "state: England,"
-          + "state_district: Greater London,"
-          + "suburb: Clerkenwell}");
-      System.out.println(formatted);
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
   }
 
   public enum OutputType {STRING, ARRAY}
