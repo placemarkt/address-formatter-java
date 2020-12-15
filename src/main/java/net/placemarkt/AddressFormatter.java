@@ -28,6 +28,7 @@ import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import java.util.Optional;
+
 import static java.util.Map.entry;
 
 class AddressFormatter {
@@ -54,7 +55,7 @@ class AddressFormatter {
       entry("\n[ \t]+", "\n"),
       entry("\n+", "\n")
   );
-  private static final RegexCache regexCache = new RegexCache();
+  private static final RegexPatternCache regexPatternCache = new RegexPatternCache();
 
   private static List<String> getKnownComponents() {
     List<String> knownComponents = new ArrayList<>();
@@ -147,12 +148,12 @@ class AddressFormatter {
 
       if (country.has("change_country")) {
         String newCountry = country.get("change_country").asText();
-        Pattern p = Pattern.compile("\\$(\\w*)");
+        Pattern p = regexPatternCache.get("\\$(\\w*)");
         Matcher m = p.matcher(newCountry);
         String match;
         if (m.find()) {
           match = m.group(1); // $state
-          Pattern p2 = Pattern.compile(String.format("\\$%s", match));
+          Pattern p2 = regexPatternCache.get(String.format("\\$%s", match));
           Matcher m2;
           if (components.get(match) != null && components.containsKey(match)) {
             m2 = p2.matcher(newCountry);
@@ -180,9 +181,9 @@ class AddressFormatter {
     String state = (components.get("state") != null) ? components.get("state").toString() : null;
 
     if (countryCode.equals("NL") && state != null) {
-      Pattern p1 = Pattern.compile("sint maarten", Pattern.CASE_INSENSITIVE);
+      Pattern p1 = regexPatternCache.get("sint maarten", Pattern.CASE_INSENSITIVE);
       Matcher m1 = p1.matcher(state);
-      Pattern p2 = Pattern.compile("aruba", Pattern.CASE_INSENSITIVE);
+      Pattern p2 = regexPatternCache.get("aruba", Pattern.CASE_INSENSITIVE);
       Matcher m2 = p2.matcher(state);
       if (state.equals("Curaçao")) {
         countryCode = "CW";
@@ -212,7 +213,7 @@ class AddressFormatter {
       for (String component : components.keySet()) {
         Iterator<JsonNode> rIterator = replacements.iterator();
         String regex = String.format("^%s=", component);
-        Pattern p = Pattern.compile(regex);
+        Pattern p = regexPatternCache.get(regex);
         while (rIterator.hasNext()) {
           ArrayNode replacement = (ArrayNode) rIterator.next();
           Matcher m = p.matcher(replacement.get(0).asText());
@@ -224,7 +225,7 @@ class AddressFormatter {
             }
             m.reset();
           } else {
-            Pattern p2 = Pattern.compile(replacement.get(0).asText());
+            Pattern p2 = regexPatternCache.get(replacement.get(0).asText());
             Matcher m2 = p2.matcher(components.get(component).toString());
             String value = m2.replaceAll(replacement.get(1).asText());
             m.reset();
@@ -237,7 +238,7 @@ class AddressFormatter {
     if (!components.containsKey("state_code")  && components.containsKey("state")) {
       String stateCode = getStateCode(components.get("state").toString(), components.get("country_code").toString());
       components.put("state_code", stateCode);
-      Pattern p = Pattern.compile("^washington,? d\\.?c\\.?");
+      Pattern p = regexPatternCache.get("^washington,? d\\.?c\\.?");
       Matcher m = p.matcher(components.get("state").toString());
       if (m.find()) {
         components.put("state_code", "DC");
@@ -266,8 +267,8 @@ class AddressFormatter {
     if (components.containsKey("postcode")) {
       String postCode = components.get("postcode").toString();
       components.put("postcode", postCode);
-      Pattern p1 = Pattern.compile("^(\\d{5}),\\d{5}");
-      Pattern p2 = Pattern.compile("\\d+;\\d+");
+      Pattern p1 = regexPatternCache.get("^(\\d{5}),\\d{5}");
+      Pattern p2 = regexPatternCache.get("\\d+;\\d+");
       Matcher m1 = p1.matcher(postCode);
       Matcher m2 = p2.matcher(postCode);
       if (postCode.length() > 20) {
@@ -290,14 +291,14 @@ class AddressFormatter {
                   .forEach(replacement -> {
                     String oldComponent = components.get(abbreviation).toString();
                     String regex = String.format("\b%s\b", replacements.get("src").asText());
-                    Pattern p = Pattern.compile(regex);
+                    Pattern p = regexPatternCache.get(regex);
                     Matcher m = p.matcher(oldComponent);
                     String newComponent = m.replaceFirst(replacement.get("dest").asText());
                     components.put(abbreviation.toString(), newComponent);
                   })));
     }
 
-    Pattern p = Pattern.compile("^https?://");
+    Pattern p = regexPatternCache.get("^https?://");
     return components.entrySet().stream().filter(component -> {
       if (component.getValue() == null) {
         return false;
@@ -435,7 +436,7 @@ class AddressFormatter {
     if (template.has("postformat_replace")) {
       ArrayNode postformat = (ArrayNode) template.get("postformat_replace");
       for (JsonNode regex : postformat) {
-        Pattern p = Pattern.compile(regex.get(0).asText());
+        Pattern p = regexPatternCache.get(regex.get(0).asText());
         Matcher m2 = p.matcher(rendered);
         rendered = m2.replaceAll(regex.get(1).asText());
       }
@@ -451,7 +452,7 @@ class AddressFormatter {
     String deduped = rendered;
 
     for(Map.Entry<String, String> replacement : entries) {
-      Pattern p = Pattern.compile(replacement.getKey(), Pattern.UNICODE_CHARACTER_CLASS);
+      Pattern p = regexPatternCache.get(replacement.getKey(), Pattern.UNICODE_CHARACTER_CLASS);
       Matcher m = p.matcher(deduped);
       String predupe = m.replaceAll(replacement.getValue());
       deduped = dedupe(predupe);
