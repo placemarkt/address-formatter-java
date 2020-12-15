@@ -28,18 +28,19 @@ import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import java.util.Optional;
+import jdk.jfr.Experimental;
 
 import static java.util.Map.entry;
 
 class AddressFormatter {
 
-  private static final JsonNode worldwide = TemplateProcessor.transpileWorldwide();
-  private static final JsonNode countryNames = TemplateProcessor.transpileCountryNames();
-  private static final JsonNode aliases = TemplateProcessor.transpileAliases();
-  private static final JsonNode abbreviations = TemplateProcessor.transpileAbbreviations();
-  private static final JsonNode country2Lang = TemplateProcessor.transpileCountry2Lang();
-  private static final JsonNode countyCodes = TemplateProcessor.transpileCountyCodes();
-  private static final JsonNode stateCodes = TemplateProcessor.transpileStateCodes();
+  private static final JsonNode worldwide = Template.transpileWorldwide();
+  private static final JsonNode countryNames = Template.transpileCountryNames();
+  private static final JsonNode aliases = Template.transpileAliases();
+  private static final JsonNode abbreviations = Template.transpileAbbreviations();
+  private static final JsonNode country2Lang = Template.transpileCountry2Lang();
+  private static final JsonNode countyCodes = Template.transpileCountyCodes();
+  private static final JsonNode stateCodes = Template.transpileStateCodes();
   private static final List<String> knownComponents = getKnownComponents();
   private static final Map<String, String> replacements = Map.ofEntries(
       entry("[\\},\\s]+$", ""),
@@ -79,11 +80,11 @@ class AddressFormatter {
     this.appendCountry = appendCountry;
   }
 
-  String format(String json) throws IOException {
+  public String format(String json) throws IOException {
     return format(json, null);
   }
 
-  String format(String json, String fallbackCountryCode) throws IOException {
+  public String format(String json, String fallbackCountryCode) throws IOException {
     TypeFactory factory = TypeFactory.defaultInstance();
     MapType type = factory.constructMapType(HashMap.class, String.class, String.class);
     Map<String, Object> components = yamlReader.readValue(json, type);
