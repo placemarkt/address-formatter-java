@@ -372,7 +372,6 @@ class AddressFormatter {
   }
 
   String renderTemplate(JsonNode template, Map<String, Object> components) {
-
     Map<String, Object> callback = new HashMap<>();
     callback.put("first", new Function<String, String>() {
       @Override
@@ -501,7 +500,8 @@ class AddressFormatter {
   String dedupe(String rendered) {
     String deduped = Arrays.stream(rendered.split("\n"))
         .map(s -> Arrays.stream(s.trim().split(", "))
-            .map(s2 -> s2.trim()).collect(Collectors.joining(", ")))
+            .map(s2 -> s2.trim()).distinct().collect(Collectors.joining(", ")))
+        .distinct()
         .collect(Collectors.joining("\n"));
     return deduped;
   }
@@ -509,14 +509,17 @@ class AddressFormatter {
     AddressFormatter formatter = new AddressFormatter(OutputType.STRING, false, false);
     try {
 
-      String formatted = formatter.format("{city: Djibouti,"
-          + "country: Djibouti,"
-          + "country_code: dj,"
-          + "neighbourhood: Place Mahmoud Harbi,"
-          + "restaurant: Blue Nile,"
-          + "road: Ethiopia Street,"
-          + "state: Djibouti,"
-          + "suburb: District 1}");
+      String formatted = formatter.format("{city: London Borough of Islington,"
+          + "country: United Kingdom,"
+          + "country_code: GB,"
+          + "county: London,"
+          + "house: Lokku Ltd,"
+          + "house_number: 82,"
+          + "postcode: EC1M 5RF,"
+          + "road: Clerkenwell Road,"
+          + "state: England,"
+          + "state_district: Greater London,"
+          + "suburb: Clerkenwell}");
       System.out.println(formatted);
     } catch (Exception e) {
       e.printStackTrace();
