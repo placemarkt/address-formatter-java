@@ -52,7 +52,7 @@ public class AddressFormatterTest {
         try(Stream<Path> paths = Files.list(Paths.get("address-formatting/testcases/countries"))) {
           paths.forEach(path -> {
             try {
-              String yaml = Files.readString(path);
+              String yaml = Template.readFile(path.toString());
               Object obj = yamlReader.readValue(yaml, Object.class);
               ObjectNode node = jsonWriter.valueToTree(obj);
               String components = node.get("components").toString();
@@ -163,7 +163,6 @@ public class AddressFormatterTest {
           + "United States of America\n", formatted);
     }
 
-
     @Test
     public void correctlyAbbreviatesRoad() throws Exception {
       String json = "{country_code: 'US',\n"
@@ -212,7 +211,6 @@ public class AddressFormatterTest {
           + "Vancouver, BC V6K\n"
           + "Canada\n", formatted);
     }
-
 
     @Test
     public void correctlyAbbreviatesESCarrer() throws Exception {

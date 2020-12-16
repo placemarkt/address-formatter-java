@@ -30,8 +30,6 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import java.util.Optional;
 
-import static java.util.Map.entry;
-
 public class AddressFormatter {
 
   private static final JsonNode worldwide = Template.transpileWorldwide();
@@ -42,20 +40,21 @@ public class AddressFormatter {
   private static final JsonNode countyCodes = Template.transpileCountyCodes();
   private static final JsonNode stateCodes = Template.transpileStateCodes();
   private static final List<String> knownComponents = getKnownComponents();
-  private static final Map<String, String> replacements = Map.ofEntries(
-      entry("[\\},\\s]+$", ""),
-      entry("^[,\\s]+", ""),
-      entry("^- ", ""),
-      entry(",\\s*,", ", "),
-      entry("[ \t]+,[ \t]+", ", "),
-      entry("[ \t][ \t]+", " "),
-      entry("[ \t]\n", "\n"),
-      entry("\n,", "\n"),
-      entry(",+", ","),
-      entry(",\n", "\n"),
-      entry("\n[ \t]+", "\n"),
-      entry("\n+", "\n")
-  );
+  private static final Map<String, String> replacements = new HashMap<String, String>() {{
+         put("[\\},\\s]+$", "");
+         put("^[,\\s]+", "");
+         put("^- ", "");
+         put(",\\s*,", ", ");
+         put("[ \t]+,[ \t]+", ", ");
+         put("[ \t][ \t]+", " ");
+         put("[ \t]\n", "\n");
+         put("\n,", "\n");
+         put(",+", ",");
+         put(",\n", "\n");
+         put("\n[ \t]+", "\n");
+         put("\n+", "\n");
+  }};
+
   private static final RegexPatternCache regexPatternCache = new RegexPatternCache();
 
   private static List<String> getKnownComponents() {
@@ -458,7 +457,7 @@ public class AddressFormatter {
       }
     }
     rendered = cleanupRender(rendered);
-    String trimmed = rendered.strip();
+    String trimmed = rendered.trim();
 
     return trimmed + "\n";
   }

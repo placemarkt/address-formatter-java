@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.stream.Stream;
 import java.util.List;
 import java.util.Iterator;
+import java.nio.charset.StandardCharsets;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -26,7 +27,7 @@ class Template {
     ObjectNode node = null;
     try {
       Path path = Paths.get("address-formatting/conf/countries/worldwide.yaml");
-      String yaml = Files.readString(path);
+      String yaml = Template.readFile(path.toString());
       Object obj = yamlReader.readValue(yaml, Object.class);
       node = jsonWriter.valueToTree(obj);
     } catch (IOException e) {
@@ -40,7 +41,7 @@ class Template {
     ObjectNode node = null;
     try {
       Path path = Paths.get("address-formatting/conf/country_codes.yaml");
-      String yaml = Files.readString(path);
+      String yaml = Template.readFile(path.toString());
       String formattedYaml = yaml.replaceAll(" \\# ", " ");
       Object obj = yamlReader.readValue(formattedYaml, Object.class);
       node = jsonWriter.valueToTree(obj);
@@ -88,7 +89,7 @@ class Template {
             String fileNameWithExtension = path.getFileName().toString();
             int pos = fileNameWithExtension.lastIndexOf(".");
             String fileName = fileNameWithExtension.substring(0, pos).toUpperCase();
-            String yaml = Files.readString(path);
+            String yaml = Template.readFile(path.toString());
             Object obj = yamlReader.readValue(yaml, Object.class);
             JsonNode country = jsonWriter.valueToTree(obj);
             Iterator<String> fieldName = country.fieldNames();
@@ -128,7 +129,7 @@ class Template {
     ObjectNode node = null;
     try {
       Path path = Paths.get("address-formatting/conf/country2lang.yaml");
-      String yaml = Files.readString(path);
+      String yaml = Template.readFile(path.toString());
       Object obj = yamlReader.readValue(yaml, Object.class);
       node = jsonWriter.valueToTree(obj);
       Iterator<String> countries = node.fieldNames();
@@ -155,7 +156,7 @@ class Template {
     ObjectNode node = null;
     try {
       Path path = Paths.get("address-formatting/conf/county_codes.yaml");
-      String yaml = Files.readString(path);
+      String yaml = Template.readFile(path.toString());
       Object obj = yamlReader.readValue(yaml, Object.class);
       node = jsonWriter.valueToTree(obj);
     } catch (IOException e) {
@@ -171,12 +172,19 @@ class Template {
     ObjectNode node = null;
     try {
       Path path = Paths.get("address-formatting/conf/state_codes.yaml");
-      String yaml = Files.readString(path);
+      String yaml = Template.readFile(path.toString());
       Object obj = yamlReader.readValue(yaml, Object.class);
       node = jsonWriter.valueToTree(obj);
     } catch (IOException e) {
       e.printStackTrace();
     }
     return node;
+  }
+
+  static String readFile(String path)
+      throws IOException
+  {
+    byte[] encoded = Files.readAllBytes(Paths.get(path));
+    return new String(encoded, StandardCharsets.UTF_8);
   }
 }
