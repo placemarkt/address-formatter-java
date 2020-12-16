@@ -21,17 +21,17 @@ Add the following to your pom.xml to use the latest release with Maven:
 // Returns an instance of the AddressFormatter class
 AddressFormatter formatter = new AddressFormatter(Boolean abbreviate, Boolean appendCountry)
 
-// Takes in a valud Json String argument returning a formatted address String.
-formatter.format(String json)
+// Takes in a valid Json String argument returning a formatted address String
+String formattedAddres = formatter.format(String json)
 
-// Takes in a String json argument and a fallbackCountry code in case provided country code is not valid.
+// Takes in a valid Json String argument and a fallbackCountryCode in case provided country code is not valid.
 String formattedAddress = formatter.format(String json, String fallbackCountryCode)
 ```
 
 ### Use
 
 ```
-static AddressFormatter formatter = new AddressFormatter(OutputType.STRING, false, false);
+static AddressFormatter formatter = new AddressFormatter(false, false);
 String json = "{country_code: 'US',\n"
           + "house_number: '301',\n"
           + "road: 'Hamilton Avenue',\n"
@@ -48,7 +48,7 @@ Palo Alto, CA 94303
 United States of America
 */
 
-static AddressFormatter abbreviateFormatter = new AddressFormatter(OutputType.STRING, true, false);
+static AddressFormatter abbreviateFormatter = new AddressFormatter(true, false);
 String json = "{country_code: 'US',\n"
           + "house_number: '301',\n"
           + "road: 'Hamilton Avenue',\n"
@@ -65,7 +65,7 @@ Palo Alto, CA 94303
 United States of America
 */
 
-static AddressFormatter appendCountryFormatter = new AddressFormatter(OutputType.STRING, false, true);
+static AddressFormatter appendCountryFormatter = new AddressFormatter(false, true);
 String json = "{country_code: 'US',\n"
           + "house_number: '301',\n"
           + "road: 'Hamilton Avenue',\n"
