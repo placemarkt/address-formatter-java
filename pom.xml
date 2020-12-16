@@ -67,4 +67,12 @@
       </plugin>
     </plugins>
   </build>
+
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <name>GitHub rkoeze Apache Maven Packages</name>
+      <url>https://maven.pkg.github.com/rkoeze/address-formatter-java</url>
+    </repository>
+  </distributionManagement>
 </project>
