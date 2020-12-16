@@ -70,12 +70,10 @@ public class AddressFormatter {
   }
 
   private final ObjectMapper yamlReader = new ObjectMapper(new YAMLFactory());
-  private final OutputType outputType;
   private final boolean abbreviate;
   private final boolean appendCountry;
 
-  public AddressFormatter(OutputType outputType, Boolean abbreviate, Boolean appendCountry) {
-    this.outputType = outputType;
+  public AddressFormatter(Boolean abbreviate, Boolean appendCountry) {
     this.abbreviate = abbreviate;
     this.appendCountry = appendCountry;
   }
@@ -486,6 +484,4 @@ public class AddressFormatter {
         .distinct()
         .collect(Collectors.joining("\n"));
   }
-
-  public enum OutputType {STRING, ARRAY}
 }

@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import net.placemarkt.AddressFormatter.OutputType;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,7 +33,7 @@ public class AddressFormatterTest {
 
     @BeforeClass
     public static void setup() {
-      formatter = new AddressFormatter(OutputType.STRING, false, false);
+      formatter = new AddressFormatter(false, false);
     }
 
     public ParameterizedAddressFormatterTest(String components, String address, String description) {
@@ -86,9 +85,9 @@ public class AddressFormatterTest {
 
     @BeforeClass
     public static void setup() {
-      formatter = new AddressFormatter(OutputType.STRING, false, false);
-      formatterWithAppendCountryFlag = new AddressFormatter(OutputType.STRING, false, true);
-      formatterWithAbbreviationFlag = new AddressFormatter(OutputType.STRING, true, false);
+      formatter = new AddressFormatter(false, false);
+      formatterWithAppendCountryFlag = new AddressFormatter(false, true);
+      formatterWithAbbreviationFlag = new AddressFormatter(true, false);
     }
 
     @Test
