@@ -13,60 +13,118 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.junit.experimental.runners.Enclosed;
 import org.junit.Assert;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.stream.Stream;
 
-@RunWith(Parameterized.class)
+
+@RunWith(Enclosed.class)
 public class AddressFormatterTest {
-  final private String components;
-  final private String address;
-  final private String description;
-  static AddressFormatter formatter;
 
-  @BeforeClass
-  public static void setup() {
-    formatter = new AddressFormatter(OutputType.STRING, false, false);
-  }
+  @RunWith(Parameterized.class)
+  public static class ParameterizedAddressFormatterTest {
+    final private String components;
+    final private String address;
+    final private String description;
+    static AddressFormatter formatter;
 
-  public AddressFormatterTest(String components, String address, String description) {
-    super();
-    this.components = components;
-    this.address = address;
-    this.description = description;
-  }
-
-  @Parameters(name = "{2}")
-  public static Collection<String[]> addresses() {
-    ObjectMapper yamlReader = new ObjectMapper(new YAMLFactory());
-    ObjectMapper jsonWriter = new ObjectMapper();
-    Collection<String[]> dict = new ArrayList<>();
-    try {
-      try(Stream<Path> paths = Files.list(Paths.get("address-formatting/testcases/countries"))) {
-        paths.forEach(path -> {
-          try {
-            String yaml = Files.readString(path);
-            Object obj = yamlReader.readValue(yaml, Object.class);
-            ObjectNode node = jsonWriter.valueToTree(obj);
-            String components = node.get("components").toString();
-            String expected = node.get("expected").textValue();
-            String description = node.get("description").toString();
-            dict.add(new String[] {components, expected, description});
-          } catch (IOException e) {
-            e.printStackTrace();
-          }
-        });
-      }
-    } catch (IOException e) {
-      e.printStackTrace();
+    @BeforeClass
+    public static void setup() {
+      formatter = new AddressFormatter(OutputType.STRING, false, false);
     }
-    return dict;
+
+    public ParameterizedAddressFormatterTest(String components, String address, String description) {
+      super();
+      this.components = components;
+      this.address = address;
+      this.description = description;
+    }
+
+    @Parameters(name = "{2}")
+    public static Collection<String[]> addresses() {
+      ObjectMapper yamlReader = new ObjectMapper(new YAMLFactory());
+      ObjectMapper jsonWriter = new ObjectMapper();
+      Collection<String[]> dict = new ArrayList<>();
+      try {
+        try(Stream<Path> paths = Files.list(Paths.get("address-formatting/testcases/countries"))) {
+          paths.forEach(path -> {
+            try {
+              String yaml = Files.readString(path);
+              Object obj = yamlReader.readValue(yaml, Object.class);
+              ObjectNode node = jsonWriter.valueToTree(obj);
+              String components = node.get("components").toString();
+              String expected = node.get("expected").textValue();
+              String description = node.get("description").toString();
+              dict.add(new String[] {components, expected, description});
+            } catch (IOException e) {
+              e.printStackTrace();
+            }
+          });
+        }
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      return dict;
+    }
+
+    @Test
+    public void worksWithAddressesWorldwide() throws Exception {
+      String formatted = formatter.format(this.components);
+      Assert.assertEquals(this.address, formatted);
+    }
   }
 
-  @Test
-  public void verifyAddressFormatting() throws Exception {
-    String formatted = formatter.format(this.components);
-    Assert.assertEquals(this.address, formatted);
+  public static class SingleTests {
+
+    static AddressFormatter formatter;
+
+    @BeforeClass
+    public static void setup() {
+      formatter = new AddressFormatter(OutputType.STRING, false, false);
+    }
+
+    @Test
+    public void dealsWithEmptyStringCorrectly() {
+      String json = "";
+      IOException error = assertThrows(IOException.class, () -> {
+        String formatted = formatter.format(json);
+      });
+
+      assertEquals("Json processing exception", error.getMessage());
+    }
+
+    @Test
+    public void dealsWithImproperlyFormatterJsonCorrectly() {
+      String json = "{";
+      IOException error = assertThrows(IOException.class, () -> {
+        String formatted = formatter.format(json);
+      });
+
+      assertEquals("Json processing exception", error.getMessage());
+    }
+
+    @Test
+    public void  correctlySetsFallbackCountryCode() throws Exception {
+      String json =  "{city: 'Antwerp',"
+          + "city_district: 'Antwerpen',"
+          + "country: 'Belgium',"
+          + "country_code: 'yu',"
+          + "county: 'Antwerp',"
+          + "house_number: 63,"
+          + "neighbourhood: 'Sint-Andries',"
+          + "postcode: 2000,"
+          + "restaurant: 'Meat & Eat',"
+          + "road: 'Vrijheidstraat',"
+          + "state: 'Flanders'}";
+      String formatted = formatter.format(json, "US");
+      Assert.assertEquals(formatted, "Meat & Eat\n"
+          + "63 Vrijheidstraat\n"
+          + "Antwerp, Flanders 2000\n"
+          + "Belgium\n");
+    }
   }
 }
