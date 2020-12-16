@@ -18,14 +18,12 @@ Add the following to your pom.xml to use the latest release with Maven:
 ### API
 
 ```
-// Returns an instance of the AddressFormatter class
-AddressFormatter formatter = new AddressFormatter(Boolean abbreviate, Boolean appendCountry)
+// Constructor
+AddressFormatter(Boolean abbreviate, Boolean appendCountry)
 
-// Takes in a valid Json String argument returning a formatted address String
-String formattedAddres = formatter.format(String json)
-
-// Takes in a valid Json String argument and a fallbackCountryCode in case provided country code is not valid.
-String formattedAddress = formatter.format(String json, String fallbackCountryCode)
+// Methods
+format(String json)
+format(String json, String fallbackCountryCode)
 ```
 
 ### Use
