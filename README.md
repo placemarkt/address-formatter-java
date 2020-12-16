@@ -29,7 +29,7 @@ format(String json, String fallbackCountryCode)
 ### Use
 
 ```
-static AddressFormatter formatter = new AddressFormatter(false, false);
+AddressFormatter formatter = new AddressFormatter(false, false);
 String json = "{country_code: 'US',\n"
           + "house_number: '301',\n"
           + "road: 'Hamilton Avenue',\n"
@@ -46,7 +46,7 @@ Palo Alto, CA 94303
 United States of America
 */
 
-static AddressFormatter abbreviateFormatter = new AddressFormatter(true, false);
+AddressFormatter abbreviateFormatter = new AddressFormatter(true, false);
 String json = "{country_code: 'US',\n"
           + "house_number: '301',\n"
           + "road: 'Hamilton Avenue',\n"
@@ -63,7 +63,7 @@ Palo Alto, CA 94303
 United States of America
 */
 
-static AddressFormatter appendCountryFormatter = new AddressFormatter(false, true);
+AddressFormatter appendCountryFormatter = new AddressFormatter(false, true);
 String json = "{country_code: 'US',\n"
           + "house_number: '301',\n"
           + "road: 'Hamilton Avenue',\n"
