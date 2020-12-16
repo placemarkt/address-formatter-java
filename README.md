@@ -6,7 +6,7 @@ A Maven package for formatting data in the OpenStreetMaps `address` field genera
 
 ### Installation
 
-To use the latest release with Maven, add the following to your pom.xml:
+Add the following to your pom.xml to use the latest release with Maven:
 
 ```
 <dependency>
@@ -18,14 +18,14 @@ To use the latest release with Maven, add the following to your pom.xml:
 ### API
 
 ```
-// Constructs a formatter 
-AddressFormatter formatter = AddressFormatter(OutputType outputType, abbreviate, appendCountry)
+// Returns an instance of the AddressFormatter class
+AddressFormatter formatter = new AddressFormatter(Boolean abbreviate, Boolean appendCountry)
 
-// Takes in a String json argument and returns either a String or Array, depending on outputType flag set in constructor.
+// Takes in a valud Json String argument returning a formatted address String.
 formatter.format(String json)
 
 // Takes in a String json argument and a fallbackCountry code in case provided country code is not valid.
-formatter.format(String json, String fallbackCountryCode)
+String formattedAddress = formatter.format(String json, String fallbackCountryCode)
 ```
 
 ### Use
