@@ -300,12 +300,19 @@ public class AddressFormatter {
                     if (key == null) {
                       return;
                     }
+                    if (components.get(key) == null) {
+                      return;
+                    }
                     String oldComponent = components.get(key).toString();
-                    String regex = String.format("\b%s\b", replacements.get("src").asText());
+                    String src = replacement.get("src").asText();
+                    if (replacement.get("src").equals("Avenue")) {
+                      System.out.println("here");
+                    }
+                    String regex = String.format("\\b%s\\b", replacement.get("src").asText());
                     Pattern p = regexPatternCache.get(regex);
                     Matcher m = p.matcher(oldComponent);
-                    String newComponent = m.replaceFirst(replacement.get("dest").asText());
-                    components.put(abbreviation.toString(), newComponent);
+                    String newComponent = m.replaceAll(replacement.get("dest").asText());
+                    components.put(key, newComponent);
                   })));
     }
 
