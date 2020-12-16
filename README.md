@@ -15,6 +15,18 @@ To use the latest release with Maven, add the following to your pom.xml:
   <version>0.1</version>
 </dependency> 
 ```
+### API
+
+```
+// Constructs a formatter 
+AddressFormatter formatter = AddressFormatter(OutputType outputType, abbreviate, appendCountry)
+
+// Takes in a String json argument and returns either a String or Array, depending on outputType flag set in constructor.
+formatter.format(String json)
+
+// Takes in a String json argument and a fallbackCountry code in case provided country code is not valid.
+formatter.format(String json, String fallbackCountryCode)
+```
 
 ### Use
 
