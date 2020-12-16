@@ -11,8 +11,8 @@ import net.placemarkt.AddressFormatter.OutputType;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.junit.runners.Parameterized;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.Assert;
 import static org.junit.Assert.assertEquals;
@@ -81,10 +81,14 @@ public class AddressFormatterTest {
   public static class SingleTests {
 
     static AddressFormatter formatter;
+    static AddressFormatter formatterWithAppendCountryFlag;
+    static AddressFormatter formatterWithAbbreviationFlag;
 
     @BeforeClass
     public static void setup() {
       formatter = new AddressFormatter(OutputType.STRING, false, false);
+      formatterWithAppendCountryFlag = new AddressFormatter(OutputType.STRING, false, true);
+      formatterWithAbbreviationFlag = new AddressFormatter(OutputType.STRING, true, false);
     }
 
     @Test
@@ -108,8 +112,8 @@ public class AddressFormatterTest {
     }
 
     @Test
-    public void  correctlySetsFallbackCountryCode() throws Exception {
-      String json =  "{city: 'Antwerp',"
+    public void correctlySetsFallbackCountryCode() throws Exception {
+      String json = "{city: 'Antwerp',"
           + "city_district: 'Antwerpen',"
           + "country: 'Belgium',"
           + "country_code: 'yu',"
@@ -121,10 +125,42 @@ public class AddressFormatterTest {
           + "road: 'Vrijheidstraat',"
           + "state: 'Flanders'}";
       String formatted = formatter.format(json, "US");
-      Assert.assertEquals(formatted, "Meat & Eat\n"
+      assertEquals(formatted, "Meat & Eat\n"
           + "63 Vrijheidstraat\n"
           + "Antwerp, Flanders 2000\n"
           + "Belgium\n");
+    }
+
+    @Test
+    public void correctlyAppendsCountry() throws Exception {
+      String json = "{\"houseNumber\": 301,\n"
+          + "  \"road\": \"Hamilton Avenue\",\n"
+          + "  \"neighbourhood\": \"Crescent Park\",\n"
+          + "  \"city\": \"Palo Alto\",\n"
+          + "  \"postcode\": 94303,\n"
+          + "  \"county\": \"Santa Clara County\",\n"
+          + "  \"state\": \"California\",\n"
+          + "  \"countryCode\": \"US\",}";
+      String formatted = formatterWithAppendCountryFlag.format(json);
+      assertEquals("301 Hamilton Avenue\n"
+          + "Palo Alto, CA 94303\n"
+          + "United States of America\n", formatted);
+    }
+
+    @Test
+    public void correctlyAbbreviatesAddresses() throws Exception {
+      String json = "{\"houseNumber\": 301,\n"
+          + "  \"road\": \"Hamilton Avenue\",\n"
+          + "  \"neighbourhood\": \"Crescent Park\",\n"
+          + "  \"city\": \"Palo Alto\",\n"
+          + "  \"postcode\": 94303,\n"
+          + "  \"county\": \"Santa Clara County\",\n"
+          + "  \"state\": \"California\",\n"
+          + "  \"countryCode\": \"US\",}";
+      String formatted = formatterWithAbbreviationFlag.format(json);
+      assertEquals("301 Hamilton Avenue\n"
+          + "Palo Alto, CA 94303\n"
+          + "United States of America\n", formatted);
     }
   }
 }

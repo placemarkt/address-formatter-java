@@ -296,7 +296,11 @@ class AddressFormatter {
               .filter(abbreviation -> abbreviation.has("component"))
               .forEach(abbreviation -> StreamSupport.stream(abbreviation.get("replacements").spliterator(), false)
                   .forEach(replacement -> {
-                    String oldComponent = components.get(abbreviation).toString();
+                    String key = abbreviation.get("component").asText();
+                    if (key == null) {
+                      return;
+                    }
+                    String oldComponent = components.get(key).toString();
                     String regex = String.format("\b%s\b", replacements.get("src").asText());
                     Pattern p = regexPatternCache.get(regex);
                     Matcher m = p.matcher(oldComponent);
