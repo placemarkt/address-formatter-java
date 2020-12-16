@@ -74,7 +74,7 @@ public class AddressFormatter {
   private final boolean abbreviate;
   private final boolean appendCountry;
 
-  AddressFormatter(OutputType outputType, Boolean abbreviate, Boolean appendCountry) {
+  public AddressFormatter(OutputType outputType, Boolean abbreviate, Boolean appendCountry) {
     this.outputType = outputType;
     this.abbreviate = abbreviate;
     this.appendCountry = appendCountry;
