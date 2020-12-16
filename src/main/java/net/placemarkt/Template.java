@@ -16,7 +16,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.JsonNode;
 
-public class Template {
+class Template {
 
   private static final ObjectMapper yamlReader = new ObjectMapper(new YAMLFactory());
   private static final YAMLFactory yamlFactory = new YAMLFactory();

@@ -32,7 +32,7 @@ import java.util.Optional;
 
 import static java.util.Map.entry;
 
-class AddressFormatter {
+public class AddressFormatter {
 
   private static final JsonNode worldwide = Template.transpileWorldwide();
   private static final JsonNode countryNames = Template.transpileCountryNames();

@@ -4,7 +4,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.regex.Pattern;
 
-public class RegexPatternCache {
+class RegexPatternCache {
   private Map<String, Pattern> map = new HashMap<>();
 
   public Pattern get(String key) {
