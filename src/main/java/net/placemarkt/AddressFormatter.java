@@ -6,6 +6,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.databind.type.MapType;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.github.mustachejava.*;
 import com.google.common.primitives.Ints;
 import java.io.IOException;
@@ -28,7 +29,6 @@ import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import java.util.Optional;
-import jdk.jfr.Experimental;
 
 import static java.util.Map.entry;
 
@@ -87,11 +87,17 @@ class AddressFormatter {
   public String format(String json, String fallbackCountryCode) throws IOException {
     TypeFactory factory = TypeFactory.defaultInstance();
     MapType type = factory.constructMapType(HashMap.class, String.class, String.class);
-    Map<String, Object> components = yamlReader.readValue(json, type);
+    Map<String, Object> components = null;
+
+    try {
+       components = yamlReader.readValue(json, type);
+    } catch (JsonProcessingException e) {
+      throw(new IOException("Json processing exception"));
+    }
     components = normalizeFields(components);
 
     if (fallbackCountryCode != null) {
-      components.put("countryCode", fallbackCountryCode);
+      components.put("country_code", fallbackCountryCode);
     }
 
     components = determineCountryCode(components, fallbackCountryCode);
