@@ -26,7 +26,6 @@ enum Templates {
   COUNTY_CODES(transpileCountyCodes()),
   STATE_CODES(transpileStateCodes());
 
-
   private interface Constants {
     ObjectMapper yamlReader = new ObjectMapper(new YAMLFactory());
     YAMLFactory yamlFactory = new YAMLFactory();
@@ -207,5 +206,4 @@ enum Templates {
     byte[] encoded = Files.readAllBytes(Paths.get(path));
     return new String(encoded, StandardCharsets.UTF_8);
   }
-
 }

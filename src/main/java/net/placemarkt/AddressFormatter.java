@@ -32,7 +32,6 @@ import java.util.ArrayList;
 
 public class AddressFormatter {
 
-
   private static final RegexPatternCache regexPatternCache = new RegexPatternCache();
   private static final List<String> knownComponents = AddressFormatter.getKnownComponents();
   private static final Map<String, String> replacements = new HashMap<String, String>() {{
