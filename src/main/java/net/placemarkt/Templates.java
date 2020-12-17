@@ -17,19 +17,39 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.JsonNode;
 
-class Templates {
+enum Templates {
+  WORLDWIDE(Templates.transpileWorldwide()),
+  COUNTRY_NAMES(transpileCountryNames()),
+  ALIASES(transpileAliases()),
+  ABBREVIATIONS(transpileAbbreviations()),
+  COUNTRY_2_LANG(transpileCountry2Lang()),
+  COUNTY_CODES(transpileCountyCodes()),
+  STATE_CODES(transpileStateCodes());
 
-  private static final ObjectMapper yamlReader = new ObjectMapper(new YAMLFactory());
-  private static final YAMLFactory yamlFactory = new YAMLFactory();
-  private static final ObjectMapper jsonWriter = new ObjectMapper();
+
+  private interface Constants {
+    ObjectMapper yamlReader = new ObjectMapper(new YAMLFactory());
+    YAMLFactory yamlFactory = new YAMLFactory();
+    ObjectMapper jsonWriter = new ObjectMapper();
+  }
+
+  private final JsonNode data;
+
+  Templates(JsonNode data) {
+    this.data = data;
+  }
+
+  public JsonNode getData() {
+    return this.data;
+  }
 
   static JsonNode transpileWorldwide() {
     ObjectNode node = null;
     try {
       Path path = Paths.get("address-formatting/conf/countries/worldwide.yaml");
       String yaml = Templates.readFile(path.toString());
-      Object obj = yamlReader.readValue(yaml, Object.class);
-      node = jsonWriter.valueToTree(obj);
+      Object obj = Constants.yamlReader.readValue(yaml, Object.class);
+      node = Constants.jsonWriter.valueToTree(obj);
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -42,9 +62,9 @@ class Templates {
     try {
       Path path = Paths.get("address-formatting/conf/country_codes.yaml");
       String yaml = Templates.readFile(path.toString());
-      String formattedYaml = yaml.replaceAll(" \\# ", " ");
-      Object obj = yamlReader.readValue(formattedYaml, Object.class);
-      node = jsonWriter.valueToTree(obj);
+      String formattedYaml = yaml.replaceAll(" # ", " ");
+      Object obj = Constants.yamlReader.readValue(formattedYaml, Object.class);
+      node = Constants.jsonWriter.valueToTree(obj);
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -54,10 +74,10 @@ class Templates {
 
   static ArrayNode transpileAliases() {
     try {
-      final ArrayNode node = jsonWriter.createArrayNode();
+      final ArrayNode node = Constants.jsonWriter.createArrayNode();
       Path path = Paths.get("address-formatting/conf/components.yaml");
-      YAMLParser yamlParser = yamlFactory.createParser(path.toFile());
-      List<ObjectNode> nodes = jsonWriter
+      YAMLParser yamlParser = Constants.yamlFactory.createParser(path.toFile());
+      List<ObjectNode> nodes = Constants.jsonWriter
           .readValues(yamlParser, new TypeReference<ObjectNode>() {})
           .readAll();
 
@@ -81,7 +101,7 @@ class Templates {
   }
 
   static JsonNode transpileAbbreviations() {
-    ObjectNode abbreviations = jsonWriter.createObjectNode();
+    ObjectNode abbreviations = Constants.jsonWriter.createObjectNode();
     try {
       try (Stream<Path> paths = Files.list(Paths.get("address-formatting/conf/abbreviations"))) {
         paths.forEach(path -> {
@@ -90,15 +110,15 @@ class Templates {
             int pos = fileNameWithExtension.lastIndexOf(".");
             String fileName = fileNameWithExtension.substring(0, pos).toUpperCase();
             String yaml = Templates.readFile(path.toString());
-            Object obj = yamlReader.readValue(yaml, Object.class);
-            JsonNode country = jsonWriter.valueToTree(obj);
+            Object obj = Constants.yamlReader.readValue(yaml, Object.class);
+            JsonNode country = Constants.jsonWriter.valueToTree(obj);
             Iterator<String> fieldName = country.fieldNames();
-            ArrayNode countryComponentArray = jsonWriter.createArrayNode();
+            ArrayNode countryComponentArray = Constants.jsonWriter.createArrayNode();
             while (fieldName.hasNext()) {
               String type = fieldName.next();
               JsonNode replacements = country.get(type);
               Iterator<String> srcs = replacements.fieldNames();
-              ArrayNode pairs = jsonWriter.createArrayNode();
+              ArrayNode pairs = Constants.jsonWriter.createArrayNode();
               while (srcs.hasNext()) {
                 String src = srcs.next();
                 String dest = replacements.get(src).textValue();
@@ -106,7 +126,7 @@ class Templates {
                 pair.put("src", src);
                 pair.put("dest", dest);
               }
-              ObjectNode countryComponent = jsonWriter.createObjectNode();
+              ObjectNode countryComponent = Constants.jsonWriter.createObjectNode();
               countryComponent.put("component", type);
               countryComponent.set("replacements", pairs);
               countryComponentArray.add(countryComponent);
@@ -130,8 +150,8 @@ class Templates {
     try {
       Path path = Paths.get("address-formatting/conf/country2lang.yaml");
       String yaml = Templates.readFile(path.toString());
-      Object obj = yamlReader.readValue(yaml, Object.class);
-      node = jsonWriter.valueToTree(obj);
+      Object obj = Constants.yamlReader.readValue(yaml, Object.class);
+      node = Constants.jsonWriter.valueToTree(obj);
       Iterator<String> countries = node.fieldNames();
       while (countries.hasNext()) {
         String country = countries.next();
@@ -157,8 +177,8 @@ class Templates {
     try {
       Path path = Paths.get("address-formatting/conf/county_codes.yaml");
       String yaml = Templates.readFile(path.toString());
-      Object obj = yamlReader.readValue(yaml, Object.class);
-      node = jsonWriter.valueToTree(obj);
+      Object obj = Constants.yamlReader.readValue(yaml, Object.class);
+      node = Constants.jsonWriter.valueToTree(obj);
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -173,8 +193,8 @@ class Templates {
     try {
       Path path = Paths.get("address-formatting/conf/state_codes.yaml");
       String yaml = Templates.readFile(path.toString());
-      Object obj = yamlReader.readValue(yaml, Object.class);
-      node = jsonWriter.valueToTree(obj);
+      Object obj = Constants.yamlReader.readValue(yaml, Object.class);
+      node = Constants.jsonWriter.valueToTree(obj);
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -187,4 +207,5 @@ class Templates {
     byte[] encoded = Files.readAllBytes(Paths.get(path));
     return new String(encoded, StandardCharsets.UTF_8);
   }
+
 }
