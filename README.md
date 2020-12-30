@@ -14,7 +14,7 @@ Add the following to your pom.xml to use the latest release with Maven:
 <dependency>
   <groupId>net.placemarkt</groupId>
   <artifactId>address-formatter-java</artifactId>
-  <version>0.0.2</version>
+  <version>0.0.4</version>
 </dependency> 
 ```
 ### API
