@@ -65,11 +65,12 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
+        <version>3.0.0</version>
         <inherited>false</inherited>
         <executions>
           <execution>
             <id>git submodule update</id>
-            <phase>install</phase>
+            <phase>initialize</phase>
             <goals>
               <goal>exec</goal>
             </goals>
