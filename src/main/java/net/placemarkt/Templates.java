@@ -45,7 +45,7 @@ enum Templates {
   static JsonNode transpileWorldwide() {
     ObjectNode node = null;
     try {
-      Path path = Paths.get("address-formatting/conf/countries/worldwide.yaml");
+      Path path = Paths.get("src/main/resources/conf/countries/worldwide.yaml");
       String yaml = Templates.readFile(path.toString());
       Object obj = Constants.yamlReader.readValue(yaml, Object.class);
       node = Constants.jsonWriter.valueToTree(obj);
@@ -59,7 +59,7 @@ enum Templates {
   static JsonNode transpileCountryNames() {
     ObjectNode node = null;
     try {
-      Path path = Paths.get("address-formatting/conf/country_codes.yaml");
+      Path path = Paths.get("src/main/resources/conf/country_codes.yaml");
       String yaml = Templates.readFile(path.toString());
       String formattedYaml = yaml.replaceAll(" # ", " ");
       Object obj = Constants.yamlReader.readValue(formattedYaml, Object.class);
@@ -74,7 +74,7 @@ enum Templates {
   static ArrayNode transpileAliases() {
     try {
       final ArrayNode node = Constants.jsonWriter.createArrayNode();
-      Path path = Paths.get("address-formatting/conf/components.yaml");
+      Path path = Paths.get("src/main/resources/conf/components.yaml");
       YAMLParser yamlParser = Constants.yamlFactory.createParser(path.toFile());
       List<ObjectNode> nodes = Constants.jsonWriter
           .readValues(yamlParser, new TypeReference<ObjectNode>() {})
@@ -102,7 +102,7 @@ enum Templates {
   static JsonNode transpileAbbreviations() {
     ObjectNode abbreviations = Constants.jsonWriter.createObjectNode();
     try {
-      try (Stream<Path> paths = Files.list(Paths.get("address-formatting/conf/abbreviations"))) {
+      try (Stream<Path> paths = Files.list(Paths.get("src/main/resources/conf/abbreviations"))) {
         paths.forEach(path -> {
           try {
             String fileNameWithExtension = path.getFileName().toString();
@@ -147,7 +147,7 @@ enum Templates {
   static ObjectNode transpileCountry2Lang() {
     ObjectNode node = null;
     try {
-      Path path = Paths.get("address-formatting/conf/country2lang.yaml");
+      Path path = Paths.get("src/main/resources/conf/country2lang.yaml");
       String yaml = Templates.readFile(path.toString());
       Object obj = Constants.yamlReader.readValue(yaml, Object.class);
       node = Constants.jsonWriter.valueToTree(obj);
@@ -174,7 +174,7 @@ enum Templates {
   static ObjectNode transpileCountyCodes() {
     ObjectNode node = null;
     try {
-      Path path = Paths.get("address-formatting/conf/county_codes.yaml");
+      Path path = Paths.get("src/main/resources/conf/county_codes.yaml");
       String yaml = Templates.readFile(path.toString());
       Object obj = Constants.yamlReader.readValue(yaml, Object.class);
       node = Constants.jsonWriter.valueToTree(obj);
@@ -190,7 +190,7 @@ enum Templates {
   static ObjectNode transpileStateCodes() {
     ObjectNode node = null;
     try {
-      Path path = Paths.get("address-formatting/conf/state_codes.yaml");
+      Path path = Paths.get("src/main/resources/conf/state_codes.yaml");
       String yaml = Templates.readFile(path.toString());
       Object obj = Constants.yamlReader.readValue(yaml, Object.class);
       node = Constants.jsonWriter.valueToTree(obj);
