@@ -6,7 +6,7 @@
 
   <groupId>net.placemarkt</groupId>
   <artifactId>address-formatter-java</artifactId>
-  <version>0.0.4</version>
+  <version>0.0.5</version>
   <name>address-formatter-java</name>
   <description>A simple address-formatter-java.</description>
   <url>http://placemarkt.net</url>
@@ -69,7 +69,10 @@
         <executions>
           <execution>
             <id>git submodule update</id>
-            <phase>initialize</phase>
+            <phase>install</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
             <configuration>
               <executable>git</executable>
               <arguments>
@@ -79,13 +82,9 @@
                 <argument>--recursive</argument>
               </arguments>
             </configuration>
-            <goals>
-              <goal>exec</goal>
-            </goals>
           </execution>
         </executions>
       </plugin>
-
     </plugins>
   </build>
 
