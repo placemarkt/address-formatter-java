@@ -6,7 +6,7 @@
 
   <groupId>net.placemarkt</groupId>
   <artifactId>address-formatter-java</artifactId>
-  <version>0.0.8</version>
+  <version>0.0.9</version>
   <name>address-formatter-java</name>
   <description>A simple address-formatter-java.</description>
   <url>http://placemarkt.net</url>
