@@ -70,7 +70,7 @@ public class AddressFormatter {
     try {
        components = yamlReader.readValue(json, type);
     } catch (JsonProcessingException e) {
-      throw(new IOException("Json processing exception"));
+      throw(new IOException("Json processing exception", e));
     }
     components = normalizeFields(components);
 
