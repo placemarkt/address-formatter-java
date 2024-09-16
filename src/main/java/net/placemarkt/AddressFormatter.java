@@ -205,7 +205,8 @@ public class AddressFormatter {
           if (m.find()) {
             m.reset();
             String value = m.replaceAll("");
-            if (components.get(component).toString().equals(value)) {
+            Pattern replace_pattern = regexPatternCache.get(value);
+            if (replace_pattern.matcher(components.get(component).toString()).find()) {
               components.put(component, replacement.get(1).asText());
             }
             m.reset();
