@@ -9,6 +9,13 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Import GPG key
+        run: |
+            echo "$MAVEN_GPG_KEY" | base64 --decode | gpg --batch --import
+            echo "$MAVEN_GPG_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 --import-ownertrust
+        env:
+            MAVEN_GPG_KEY: ${{ secrets.MAVEN_GPG_KEY }}
+            MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
       - uses: actions/checkout@v4
       - name: Set up Java for publishing to Maven Central Repository
         uses: actions/setup-java@v4
