@@ -31,7 +31,8 @@ jobs:
         with:
           java-version: '11'
           distribution: 'temurin'
+          server-id: github
       - name: Publish to GitHub Packages
-        run: git submodule update --init && mkdir src/main/resources && mvn compile && mvn --batch-mode deploy
+        run: git submodule update --init && mkdir src/main/resources && mvn compile && mvn --batch-mode deploy -P github
         env:
           GITHUB_TOKEN: ${{ secrets.ADDRESS_FORMATTER_GITHUB_TOKEN }}
