@@ -15,6 +15,7 @@ import org.junit.runners.Parameterized;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.Assert;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertThrows;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -229,6 +230,17 @@ public class AddressFormatterTest {
       assertEquals("C Calatrava, 68\n"
           + "08017 Barcelona\n"
           + "Spain\n", formatted);
+    }
+
+    @Test
+    public void doesNotAddHyphenWhenCountryIsIndiaWithNoCountryCode() throws IOException {
+      String json = "{country_code: 'IN',\n"
+          + "road: 'Baner',\n"
+          + "city: 'Pune',\n"
+          + "state: 'Maharashtra',\n"
+          + "country: 'India',}";
+      String formatted = formatter.format(json);
+      assertEquals("Baner\nPune\nMaharashtra\nIndia\n", formatted);
     }
   }
 }
