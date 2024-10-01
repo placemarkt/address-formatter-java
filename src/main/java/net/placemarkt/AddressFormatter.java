@@ -1,12 +1,7 @@
 package net.placemarkt;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.type.TypeFactory;
-import com.fasterxml.jackson.databind.type.MapType;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.github.mustachejava.*;
 import com.google.common.primitives.Ints;
 import java.io.IOException;
@@ -49,7 +44,6 @@ public class AddressFormatter {
     put("\n+", "\n");
   }};
 
-  private final ObjectMapper yamlReader = new ObjectMapper(new YAMLFactory());
   private final boolean abbreviate;
   private final boolean appendCountry;
 
@@ -62,23 +56,21 @@ public class AddressFormatter {
     return format(json, null);
   }
 
-  public String format(String json, String fallbackCountryCode) throws IOException {
-    TypeFactory factory = TypeFactory.defaultInstance();
-    MapType type = factory.constructMapType(HashMap.class, String.class, String.class);
-    Map<String, Object> components = null;
-
-    try {
-       components = yamlReader.readValue(json, type);
-    } catch (JsonProcessingException e) {
-      throw(new IOException("Json processing exception", e));
-    }
-    components = normalizeFields(components);
-
+  public Map<String, Object> hydrateCountryCode(Map<String, Object> components, String fallbackCountryCode) {
     if (fallbackCountryCode != null) {
       components.put("country_code", fallbackCountryCode);
     }
 
+    return components;
+  }
+
+  public String format(String json, String fallbackCountryCode) throws IOException {
+    Map<String, Object> components = new YamlReader(json).read();
+
+    components = normalizeFields(components);
+    components = hydrateCountryCode(components, fallbackCountryCode);
     components = determineCountryCode(components, fallbackCountryCode);
+
     String countryCode = components.get("country_code").toString();
 
     if (appendCountry && Templates.COUNTRY_NAMES.getData().has(countryCode) && components.get("country") == null) {
