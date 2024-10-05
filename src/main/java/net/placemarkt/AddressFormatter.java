@@ -56,7 +56,7 @@ public class AddressFormatter {
     return format(json, null);
   }
 
-  public Map<String, Object> hydrateCountryCode(Map<String, Object> components, String fallbackCountryCode) {
+  public Map<String, String> hydrateCountryCode(Map<String, String> components, String fallbackCountryCode) {
     if (fallbackCountryCode != null) {
       components.put("country_code", fallbackCountryCode);
     }
@@ -65,12 +65,12 @@ public class AddressFormatter {
   }
 
   public String format(String json, String fallbackCountryCode) throws IOException {
-    Map<String, Object> components = new YamlReader(json).read();
+    Map<String, String> components = Json.readToStringMap(json);
 
     components = normalizeFields(components);
     components = hydrateCountryCode(components, fallbackCountryCode);
     components = determineCountryCode(components, fallbackCountryCode);
-
+    
     String countryCode = components.get("country_code").toString();
 
     if (appendCountry && Templates.COUNTRY_NAMES.getData().has(countryCode) && components.get("country") == null) {
@@ -83,11 +83,11 @@ public class AddressFormatter {
     return renderTemplate(template, components);
   }
 
-  Map<String, Object> normalizeFields(Map<String, Object> components) {
-    Map<String, Object> normalizedComponents = new HashMap<>();
-    for (Map.Entry<String, Object> entry : components.entrySet()) {
+  Map<String, String> normalizeFields(Map<String, String> components) {
+    Map<String, String> normalizedComponents = new HashMap<>();
+    for (Map.Entry<String, String> entry : components.entrySet()) {
       String field = entry.getKey();
-      Object value = entry.getValue();
+      String value = entry.getValue();
       String newField = CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, field);
       if (!normalizedComponents.containsKey(newField)) {
         normalizedComponents.put(newField, value);
@@ -96,7 +96,7 @@ public class AddressFormatter {
     return normalizedComponents;
   }
 
-  Map<String, Object> determineCountryCode(Map<String, Object> components,
+  Map<String, String> determineCountryCode(Map<String, String> components,
     String fallbackCountryCode) {
     String countryCode;
 
@@ -178,9 +178,9 @@ public class AddressFormatter {
     return components;
   }
 
-  Map<String, Object> cleanupInput(Map<String, Object> components, JsonNode replacements) {
-    Object country = components.get("country");
-    Object state = components.get("state");
+  Map<String, String> cleanupInput(Map<String, String> components, JsonNode replacements) {
+    String country = components.get("country");
+    String state = components.get("state");
 
     if (country != null && state != null && Ints.tryParse((String) country) != null) {
       components.put("country", state);
@@ -305,8 +305,8 @@ public class AddressFormatter {
     }).collect(Collectors.toMap(Entry::getKey, Entry::getValue));
   }
 
-  Map<String, Object> applyAliases(Map<String, Object> components) {
-    Map<String, Object> aliasedComponents = new HashMap<>();
+  Map<String, String> applyAliases(Map<String, String> components) {
+    Map<String, String> aliasedComponents = new HashMap<>();
     components.forEach((key, value) -> {
       String newKey = key;
       Iterator<JsonNode> iterator = Templates.ALIASES.getData().elements();
@@ -325,7 +325,7 @@ public class AddressFormatter {
     return aliasedComponents;
   }
 
-  JsonNode findTemplate(Map<String, Object> components) {
+  JsonNode findTemplate(Map<String, String> components) {
     JsonNode template;
     if (Templates.WORLDWIDE.getData().has(components.get("country_code").toString())) {
       template = Templates.WORLDWIDE.getData().get(components.get("country_code").toString());
@@ -336,7 +336,7 @@ public class AddressFormatter {
     return template;
   }
 
-  JsonNode chooseTemplateText(JsonNode template, Map<String, Object> components) {
+  JsonNode chooseTemplateText(JsonNode template, Map<String, String> components) {
     JsonNode selected;
     if (template.has("address_template")) {
       if (Templates.WORLDWIDE.getData().has(template.get("address_template").asText())) {
@@ -407,8 +407,8 @@ public class AddressFormatter {
     return countyCode.map(JsonNode::asText).orElse(null);
   }
 
-  String renderTemplate(JsonNode template, Map<String, Object> components) {
-    Map<String, Object> callback = new HashMap<>();
+  String renderTemplate(JsonNode template, Map<String, String> components) {
+    Map<String, Function<String, String>> callback = new HashMap<>();
     callback.put("first", (Function<String, String>) s -> {
       String[] splitted = s.split("\\s*\\|\\|\\s*");
       Optional<String> chosen = Arrays.stream(splitted).filter(v -> v.length() > 0).findFirst();
