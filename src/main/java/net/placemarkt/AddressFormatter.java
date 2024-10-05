@@ -214,7 +214,11 @@ public class AddressFormatter {
     }
 
     if (!components.containsKey("state_code")  && components.containsKey("state")) {
-      String stateCode = getStateCode(components.get("state").toString(), components.get("country_code").toString());
+      String stateCode = getCode(
+        components.get("state").toString(),
+        components.get("country_code").toString(),
+        Templates.STATE_CODES
+      );
       components.put("state_code", stateCode);
       Pattern p = regexPatternCache.get("^washington,? d\\.?c\\.?");
       Matcher m = p.matcher(components.get("state").toString());
@@ -226,7 +230,11 @@ public class AddressFormatter {
     }
 
     if (!components.containsKey("county_code") && components.containsKey("county")) {
-      String countyCode = getCountyCode(components.get("county").toString(), components.get("country_code").toString());
+      String countyCode = getCode(
+        components.get("county").toString(),
+        components.get("country_code").toString(),
+        Templates.COUNTY_CODES
+      );
       components.put("county_code", countyCode);
     }
 
@@ -366,45 +374,26 @@ public class AddressFormatter {
     return selected;
   }
 
-  String getStateCode(String state, String countryCode) {
-    if (!Templates.STATE_CODES.getData().has(countryCode)) {
+  String getCode(String state, String code, Templates codesTemplate) {
+    if (!codesTemplate.getData().has(code)) {
       return null;
     }
 
-    JsonNode countryCodes = Templates.STATE_CODES.getData().get(countryCode);
-    Iterator<String> iterator = countryCodes.fieldNames();
+    JsonNode countryCode = codesTemplate.getData().get(code);
+    Iterator<String> iterator = countryCode.fieldNames();
     return StreamSupport
         .stream(Spliterators.spliteratorUnknownSize(iterator,
         Spliterator.ORDERED), false).filter(key-> {
-          JsonNode code = countryCodes.get(key);
-      if (code.isObject()) {
-        if (code.has("default")) {
-          return code.get("default").asText().toUpperCase().equals(state.toUpperCase());
+          JsonNode name = countryCode.get(key);
+      if (name.isObject()) {
+        if (name.has("default")) {
+          return name.get("default").asText().toUpperCase().equals(state.toUpperCase());
         }
       } else {
-        return code.asText().toUpperCase().equals(state.toUpperCase());
+        return name.asText().toUpperCase().equals(state.toUpperCase());
       }
       return false;
     }).findFirst().orElse(null);
-  }
-
-  String getCountyCode(String county, String countryCode) {
-    if (!Templates.COUNTY_CODES.getData().has(countryCode)) {
-      return null;
-    }
-    JsonNode country = Templates.COUNTY_CODES.getData().get(countryCode);
-    Optional<JsonNode> countyCode = StreamSupport.stream(country.spliterator(), true).filter(posCounty -> {
-      if (posCounty.isObject()) {
-        if (posCounty.has("default")) {
-          return posCounty.get("default").asText().toUpperCase().equals(county.toUpperCase());
-        }
-      } else {
-        return posCounty.asText().toUpperCase().equals(county.toUpperCase());
-      }
-      return false;
-    }).findFirst();
-
-    return countyCode.map(JsonNode::asText).orElse(null);
   }
 
   String renderTemplate(JsonNode template, Map<String, String> components) {
