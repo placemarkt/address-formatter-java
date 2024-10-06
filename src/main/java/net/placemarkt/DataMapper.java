@@ -15,14 +15,19 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class DataMapper {
-    private static final TypeFactory factory = TypeFactory.defaultInstance();
-    private static final ObjectMapper jsonReader = new ObjectMapper();
-    private static final ObjectMapper yamlReader = new ObjectMapper(new YAMLFactory());
-    public static final MapType stringMapType = factory.constructMapType(HashMap.class, String.class, String.class);
+    public static interface Helpers {
+        final ObjectMapper jsonReader = new ObjectMapper();
+        final ObjectMapper yamlReader = new ObjectMapper(new YAMLFactory());
+    }
+
+    public static interface Types {
+        final TypeFactory factory = TypeFactory.defaultInstance();
+        final MapType stringMapType = factory.constructMapType(HashMap.class, String.class, String.class);
+    }
 
     public static Map<String, String> readToStringMap(String json) throws IOException {
         try {
-            return jsonReader.readValue(json, stringMapType);
+            return Helpers.jsonReader.readValue(json, Types.stringMapType);
         } catch (JsonProcessingException e) {
             throw new IOException("Json processing exception", e);
         }
@@ -32,8 +37,8 @@ public class DataMapper {
         try {
             Path path = Paths.get(yamlFilePath);
             String yaml = Transpiler.readFile(path.toString());
-            Object obj = yamlReader.readValue(yaml, Object.class);
-            ObjectNode node = jsonReader.valueToTree(obj);
+            Object obj = Helpers.yamlReader.readValue(yaml, Object.class);
+            ObjectNode node = Helpers.jsonReader.valueToTree(obj);
             try (PrintWriter out = new PrintWriter(jsonFilePath)) {
                 out.println(node.toString());
             }
