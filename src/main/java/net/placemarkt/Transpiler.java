@@ -36,34 +36,17 @@ public class Transpiler {
   }
 
   static void transpileWorldwide() {
-    ObjectNode node = null;
-    try {
-      Path path = Paths.get("address-formatting/conf/countries/worldwide.yaml");
-      String yaml = Transpiler.readFile(path.toString());
-      Object obj = Constants.yamlReader.readValue(yaml, Object.class);
-      node = Constants.jsonWriter.valueToTree(obj);
-      try (PrintWriter out = new PrintWriter("src/main/resources/worldwide.json")) {
-        out.println(node.toString());
-      }
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
+    DataMapper.readToFile(
+      "address-formatting/conf/countries/worldwide.yaml",
+      "src/main/resources/worldwide.json"
+    );
   }
 
   static void transpileCountryNames() {
-    ObjectNode node = null;
-    try {
-      Path path = Paths.get("address-formatting/conf/country_codes.yaml");
-      String yaml = Transpiler.readFile(path.toString());
-      String formattedYaml = yaml.replaceAll(" # ", " ");
-      Object obj = Constants.yamlReader.readValue(formattedYaml, Object.class);
-      node = Constants.jsonWriter.valueToTree(obj);
-      try (PrintWriter out = new PrintWriter("src/main/resources/countryNames.json")) {
-        out.println(node.toString());
-      }
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
+    DataMapper.readToFile(
+      "address-formatting/conf/country_codes.yaml",
+      "src/main/resources/countryNames.json"
+    );
   }
 
   static void transpileAliases() {
@@ -169,36 +152,20 @@ public class Transpiler {
   TODO: Look into formatting this data in such a way that makes it easier to query
    */
   static void transpileCountyCodes() {
-    ObjectNode node = null;
-    try {
-      Path path = Paths.get("address-formatting/conf/county_codes.yaml");
-      String yaml = Transpiler.readFile(path.toString());
-      Object obj = Constants.yamlReader.readValue(yaml, Object.class);
-      node = Constants.jsonWriter.valueToTree(obj);
-      try (PrintWriter out = new PrintWriter("src/main/resources/countyCodes.json")) {
-        out.println(node.toString());
-      }
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
+    DataMapper.readToFile(
+      "address-formatting/conf/county_codes.yaml",
+      "src/main/resources/countyCodes.json"
+    );
   }
 
   /*
   TODO: Look into formatting this data in such a way that makes it easier to query
    */
   static void transpileStateCodes() {
-    ObjectNode node = null;
-    try {
-      Path path = Paths.get("address-formatting/conf/state_codes.yaml");
-      String yaml = Transpiler.readFile(path.toString());
-      Object obj = Constants.yamlReader.readValue(yaml, Object.class);
-      node = Constants.jsonWriter.valueToTree(obj);
-      try (PrintWriter out = new PrintWriter("src/main/resources/stateCodes.json")) {
-        out.println(node.toString());
-      }
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
+    DataMapper.readToFile(
+      "address-formatting/conf/state_codes.yaml",
+      "src/main/resources/stateCodes.json"
+    );
   }
 
   static String readFile(String path)

@@ -57,7 +57,7 @@ public class AddressFormatter {
   }
 
   public String format(String json, String fallbackCountryCode) throws IOException {
-    Map<String, String> components = Json.readToStringMap(json);
+    Map<String, String> components = DataMapper.readToStringMap(json);
 
     components = normalizeFields(components);
     components = hydrateCountryCode(components, fallbackCountryCode);
