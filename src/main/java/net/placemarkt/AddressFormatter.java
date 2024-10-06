@@ -56,21 +56,13 @@ public class AddressFormatter {
     return format(json, null);
   }
 
-  public Map<String, String> hydrateCountryCode(Map<String, String> components, String fallbackCountryCode) {
-    if (fallbackCountryCode != null) {
-      components.put("country_code", fallbackCountryCode);
-    }
-
-    return components;
-  }
-
   public String format(String json, String fallbackCountryCode) throws IOException {
     Map<String, String> components = Json.readToStringMap(json);
 
     components = normalizeFields(components);
     components = hydrateCountryCode(components, fallbackCountryCode);
     components = determineCountryCode(components, fallbackCountryCode);
-    
+
     String countryCode = components.get("country_code");
     if (appendCountry && Template.COUNTRY_NAMES.has(countryCode) && components.get("country") == null) {
       components.put("country", Template.COUNTRY_NAMES.get(countryCode).asText());
@@ -82,7 +74,15 @@ public class AddressFormatter {
     return renderTemplate(template, components);
   }
 
-  Map<String, String> normalizeFields(Map<String, String> components) {
+  private Map<String, String> hydrateCountryCode(Map<String, String> components, String fallbackCountryCode) {
+    if (fallbackCountryCode != null) {
+      components.put("country_code", fallbackCountryCode);
+    }
+
+    return components;
+  }
+
+  private Map<String, String> normalizeFields(Map<String, String> components) {
     Map<String, String> normalizedComponents = new HashMap<>();
     for (Map.Entry<String, String> entry : components.entrySet()) {
       String newField = CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, entry.getKey());
@@ -93,7 +93,7 @@ public class AddressFormatter {
     return normalizedComponents;
   }
 
-  Map<String, String> determineCountryCode(Map<String, String> components,
+  private Map<String, String> determineCountryCode(Map<String, String> components,
     String fallbackCountryCode) {
     String countryCode;
 
@@ -175,7 +175,7 @@ public class AddressFormatter {
     return components;
   }
 
-  Map<String, String> cleanupInput(Map<String, String> components, JsonNode replacements) {
+  private Map<String, String> cleanupInput(Map<String, String> components, JsonNode replacements) {
     String country = components.get("country");
     String state = components.get("state");
 
@@ -310,7 +310,7 @@ public class AddressFormatter {
     }).collect(Collectors.toMap(Entry::getKey, Entry::getValue));
   }
 
-  Map<String, String> applyAliases(Map<String, String> components) {
+  private Map<String, String> applyAliases(Map<String, String> components) {
     Map<String, String> aliasedComponents = new HashMap<>();
     components.forEach((key, value) -> {
       String newKey = key;
@@ -330,7 +330,7 @@ public class AddressFormatter {
     return aliasedComponents;
   }
 
-  JsonNode findTemplate(Map<String, String> components) {
+  private JsonNode findTemplate(Map<String, String> components) {
     JsonNode template;
     if (Template.WORLDWIDE.has(components.get("country_code"))) {
       template = Template.WORLDWIDE.get(components.get("country_code"));
@@ -341,7 +341,7 @@ public class AddressFormatter {
     return template;
   }
 
-  JsonNode chooseTemplateText(JsonNode template, Map<String, String> components) {
+  private JsonNode chooseTemplateText(JsonNode template, Map<String, String> components) {
     JsonNode selected;
     if (template.has("address_template")) {
       if (Template.WORLDWIDE.has(template.get("address_template").asText())) {
@@ -371,7 +371,7 @@ public class AddressFormatter {
     return selected;
   }
 
-  String getCode(String state, String code, Template codesTemplate) {
+  private String getCode(String state, String code, Template codesTemplate) {
     if (!codesTemplate.has(code)) {
       return null;
     }
@@ -393,7 +393,7 @@ public class AddressFormatter {
     }).findFirst().orElse(null);
   }
 
-  String renderTemplate(JsonNode template, Map<String, String> components) {
+  private String renderTemplate(JsonNode template, Map<String, String> components) {
     Map<String, Function<String, String>> callback = new HashMap<>();
     callback.put("first", (Function<String, String>) s -> {
       String[] splitted = s.split("\\s*\\|\\|\\s*");
@@ -422,7 +422,7 @@ public class AddressFormatter {
     return trimmed + "\n";
   }
 
-  String cleanupRender(String rendered) {
+  private String cleanupRender(String rendered) {
     Set<Map.Entry<String, String>> entries = replacements.entrySet();
     String deduped = rendered;
 
@@ -436,7 +436,7 @@ public class AddressFormatter {
     return deduped;
   }
 
-  String dedupe(String rendered) {
+  private String dedupe(String rendered) {
      return Arrays.stream(rendered.split("\n"))
         .map(s -> Arrays.stream(s.trim().split(", "))
             .map(String::trim).distinct().collect(Collectors.joining(", ")))
@@ -444,7 +444,7 @@ public class AddressFormatter {
         .collect(Collectors.joining("\n"));
   }
 
-  static List<String> getKnownComponents() {
+  private static List<String> getKnownComponents() {
     List<String> knownComponents = new ArrayList<>();
     Iterator<JsonNode> fields = net.placemarkt.Template.ALIASES.elements();
     while (fields.hasNext()) {
