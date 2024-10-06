@@ -2,10 +2,11 @@ package net.placemarkt;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Iterator;
 import java.io.IOException;
 import java.io.InputStream;
 
-enum Templates {
+enum Template {
   WORLDWIDE("worldwide.json"),
   COUNTRY_NAMES("countryNames.json"),
   ALIASES("aliases.json"),
@@ -20,11 +21,23 @@ enum Templates {
 
   private final JsonNode data;
 
-  Templates(String fileName) {
+  Template(String fileName) {
     this.data = setData(fileName);
   }
 
-  public JsonNode getData() {
+  public boolean has(String key) {
+    return getData().has(key);
+  }
+
+  public JsonNode get(String key) {
+    return getData().get(key);
+  }
+
+  public Iterator<JsonNode> elements() {
+    return getData().elements();
+  }
+
+  private JsonNode getData() {
     return this.data;
   }
 

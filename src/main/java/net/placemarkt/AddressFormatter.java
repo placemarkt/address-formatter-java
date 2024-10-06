@@ -71,10 +71,9 @@ public class AddressFormatter {
     components = hydrateCountryCode(components, fallbackCountryCode);
     components = determineCountryCode(components, fallbackCountryCode);
     
-    String countryCode = components.get("country_code").toString();
-
-    if (appendCountry && Templates.COUNTRY_NAMES.getData().has(countryCode) && components.get("country") == null) {
-      components.put("country", Templates.COUNTRY_NAMES.getData().get(countryCode).asText());
+    String countryCode = components.get("country_code");
+    if (appendCountry && Template.COUNTRY_NAMES.has(countryCode) && components.get("country") == null) {
+      components.put("country", Template.COUNTRY_NAMES.get(countryCode).asText());
     }
 
     components = applyAliases(components);
@@ -86,11 +85,9 @@ public class AddressFormatter {
   Map<String, String> normalizeFields(Map<String, String> components) {
     Map<String, String> normalizedComponents = new HashMap<>();
     for (Map.Entry<String, String> entry : components.entrySet()) {
-      String field = entry.getKey();
-      String value = entry.getValue();
-      String newField = CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, field);
+      String newField = CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, entry.getKey());
       if (!normalizedComponents.containsKey(newField)) {
-        normalizedComponents.put(newField, value);
+        normalizedComponents.put(newField, entry.getValue());
       }
     }
     return normalizedComponents;
@@ -110,7 +107,7 @@ public class AddressFormatter {
 
     countryCode = countryCode.toUpperCase();
 
-    if (!Templates.WORLDWIDE.getData().has(countryCode) || countryCode.length() != 2) {
+    if (!Template.WORLDWIDE.has(countryCode) || countryCode.length() != 2) {
       throw new Error("Invalid country code");
     }
 
@@ -118,7 +115,7 @@ public class AddressFormatter {
       countryCode = "GB";
     }
 
-    JsonNode country = Templates.WORLDWIDE.getData().get(countryCode);
+    JsonNode country = Template.WORLDWIDE.get(countryCode);
     if (country != null && country.has("use_country")) {
       String oldCountryCode = countryCode;
       countryCode = country.get("use_country").asText().toUpperCase();
@@ -145,7 +142,7 @@ public class AddressFormatter {
         components.put("country", newCountry);
       }
 
-      JsonNode oldCountry = Templates.WORLDWIDE.getData().get(oldCountryCode);
+      JsonNode oldCountry = Template.WORLDWIDE.get(oldCountryCode);
       JsonNode oldCountryAddComponent = oldCountry.get("add_component");
       if (oldCountryAddComponent != null && oldCountryAddComponent.toString().contains("=")) {
         String[] pairs = oldCountryAddComponent.textValue().split("=");
@@ -217,7 +214,7 @@ public class AddressFormatter {
       String stateCode = getCode(
         components.get("state").toString(),
         components.get("country_code").toString(),
-        Templates.STATE_CODES
+        Template.STATE_CODES
       );
       components.put("state_code", stateCode);
       Pattern p = regexPatternCache.get("^washington,? d\\.?c\\.?");
@@ -233,7 +230,7 @@ public class AddressFormatter {
       String countyCode = getCode(
         components.get("county").toString(),
         components.get("country_code").toString(),
-        Templates.COUNTY_CODES
+        Template.COUNTY_CODES
       );
       components.put("county_code", countyCode);
     }
@@ -266,11 +263,11 @@ public class AddressFormatter {
       }
     }
 
-    if (abbreviate && components.containsKey("country_code") && Templates.COUNTRY_2_LANG.getData().has(components.get("country_code").toString())) {
-      JsonNode languages = Templates.COUNTRY_2_LANG.getData().get(components.get("country_code").toString());
+    if (abbreviate && components.containsKey("country_code") && Template.COUNTRY_2_LANG.has(components.get("country_code").toString())) {
+      JsonNode languages = Template.COUNTRY_2_LANG.get(components.get("country_code").toString());
       StreamSupport.stream(languages.spliterator(), false)
-          .filter(language -> Templates.ABBREVIATIONS.getData().has(language.textValue()))
-          .map(language -> Templates.ABBREVIATIONS.getData().get(language.textValue())).forEach(
+          .filter(language -> Template.ABBREVIATIONS.has(language.textValue()))
+          .map(language -> Template.ABBREVIATIONS.get(language.textValue())).forEach(
           languageAbbreviations -> StreamSupport.stream(languageAbbreviations.spliterator(), false)
               .filter(abbreviation -> abbreviation.has("component"))
               .forEach(abbreviation -> StreamSupport.stream(abbreviation.get("replacements").spliterator(), false)
@@ -317,7 +314,7 @@ public class AddressFormatter {
     Map<String, String> aliasedComponents = new HashMap<>();
     components.forEach((key, value) -> {
       String newKey = key;
-      Iterator<JsonNode> iterator = Templates.ALIASES.getData().elements();
+      Iterator<JsonNode> iterator = Template.ALIASES.elements();
       while (iterator.hasNext()) {
         JsonNode pair = iterator.next();
         if (pair.get("alias").asText().equals(key)
@@ -335,10 +332,10 @@ public class AddressFormatter {
 
   JsonNode findTemplate(Map<String, String> components) {
     JsonNode template;
-    if (Templates.WORLDWIDE.getData().has(components.get("country_code").toString())) {
-      template = Templates.WORLDWIDE.getData().get(components.get("country_code").toString());
+    if (Template.WORLDWIDE.has(components.get("country_code"))) {
+      template = Template.WORLDWIDE.get(components.get("country_code"));
     } else {
-      template = Templates.WORLDWIDE.getData().get("default");
+      template = Template.WORLDWIDE.get("default");
     }
 
     return template;
@@ -347,39 +344,39 @@ public class AddressFormatter {
   JsonNode chooseTemplateText(JsonNode template, Map<String, String> components) {
     JsonNode selected;
     if (template.has("address_template")) {
-      if (Templates.WORLDWIDE.getData().has(template.get("address_template").asText())) {
-        selected = Templates.WORLDWIDE.getData().get(template.get("address_template").asText());
+      if (Template.WORLDWIDE.has(template.get("address_template").asText())) {
+        selected = Template.WORLDWIDE.get(template.get("address_template").asText());
       } else {
         selected = template.get("address_template");
       }
     } else {
-      JsonNode defaults = Templates.WORLDWIDE.getData().get("default");
-      selected = Templates.WORLDWIDE.getData().get(defaults.get("address_template").textValue());
+      JsonNode defaults = Template.WORLDWIDE.get("default");
+      selected = Template.WORLDWIDE.get(defaults.get("address_template").textValue());
     }
 
     List<String> required = Arrays.asList("road", "postcode");
     long count = required.stream().filter(req -> !components.containsKey(req)).count();
     if (count == 2) {
       if (template.has("fallback_template")) {
-        if (Templates.WORLDWIDE.getData().has(template.get("fallback_template").asText())) {
-          selected = Templates.WORLDWIDE.getData().get(template.get("fallback_template").asText());
+        if (Template.WORLDWIDE.has(template.get("fallback_template").asText())) {
+          selected = Template.WORLDWIDE.get(template.get("fallback_template").asText());
         } else {
           selected = template.get("fallback_template");
         }
       } else {
-        JsonNode defaults = Templates.WORLDWIDE.getData().get("default");
-        selected = Templates.WORLDWIDE.getData().get(defaults.get("fallback_template").textValue());
+        JsonNode defaults = Template.WORLDWIDE.get("default");
+        selected = Template.WORLDWIDE.get(defaults.get("fallback_template").textValue());
       }
     }
     return selected;
   }
 
-  String getCode(String state, String code, Templates codesTemplate) {
-    if (!codesTemplate.getData().has(code)) {
+  String getCode(String state, String code, Template codesTemplate) {
+    if (!codesTemplate.has(code)) {
       return null;
     }
 
-    JsonNode countryCode = codesTemplate.getData().get(code);
+    JsonNode countryCode = codesTemplate.get(code);
     Iterator<String> iterator = countryCode.fieldNames();
     return StreamSupport
         .stream(Spliterators.spliteratorUnknownSize(iterator,
@@ -449,7 +446,7 @@ public class AddressFormatter {
 
   static List<String> getKnownComponents() {
     List<String> knownComponents = new ArrayList<>();
-    Iterator<JsonNode> fields = net.placemarkt.Templates.ALIASES.getData().elements();
+    Iterator<JsonNode> fields = net.placemarkt.Template.ALIASES.elements();
     while (fields.hasNext()) {
       JsonNode field = fields.next();
       knownComponents.add(field.get("alias").textValue());
