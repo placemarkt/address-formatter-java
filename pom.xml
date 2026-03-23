@@ -65,27 +65,20 @@
 </dependencies>
 
 <build>
+  <resources>
+    <resource>
+      <directory>address-formatting/conf</directory>
+      <targetPath>address-formatting/conf</targetPath>
+      <includes>
+        <include>**/*.yaml</include>
+      </includes>
+    </resource>
+  </resources>
   <plugins>
     <plugin>
       <groupId>org.apache.maven.plugins</groupId>
       <artifactId>maven-compiler-plugin</artifactId>
       <version>3.8.0</version>
-    </plugin>
-    <plugin>
-      <groupId>org.codehaus.mojo</groupId>
-      <artifactId>exec-maven-plugin</artifactId>
-      <version>1.5.0</version>
-      <executions>
-        <execution>
-          <phase>compile</phase>
-          <goals>
-            <goal>java</goal>
-          </goals>
-          <configuration>
-            <mainClass>net.placemarkt.Transpiler</mainClass>
-          </configuration>
-        </execution>
-      </executions>
     </plugin>
     <plugin>
       <groupId>org.apache.maven.plugins</groupId>
